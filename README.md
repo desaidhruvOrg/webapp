@@ -1,49 +1,95 @@
 # webapp
 # Health Check API
 
-## Description
-This API offers a straightforward health monitoring solution for web services, developed using Node.js and Express. It utilizes a MySQL database to record entries from each health check, ensuring that the service remains operational and accessible.
+## Overview
+This project implements a RESTful web application with a health check endpoint and automated deployment capabilities. The application is built using Node.js and Express, with MySQL as the database.
+
+## Features
+
+### Health Check Endpoint
+- Endpoint: `/healthz`
+- Methods: GET
+- Responses:
+  - `200`: Application and database are healthy
+  - `400`: Invalid request (query parameters or content present)
+  - `405`: Method not allowed
+  - `503`: Database connection failure
+- Headers:
+  - `Cache-Control: no-cache, no-store, must-revalidate`
+  - `Pragma: no-cache`
+  - `X-Content-Type-Options: nosniff`
+
+### Integration Tests
+- Comprehensive test suite using Jest and Supertest
+- Tests cover:
+  - Successful health check
+  - Invalid request handling
+  - Method validation
+  - Non-existent routes
+  - Header validation
+  - Database connectivity
+
+### Automated Deployment
+The `setup.sh` script automates:
+- System updates and package installation
+- Swap space configuration
+- MySQL installation and optimization
+- Database initialization and security
+- Application user and directory setup
+- Node.js environment configuration
+- Systemd service creation
+
+## Technology Stack
+- Node.js
+- Express.js
+- MySQL
+- Jest (Testing)
+- Supertest (API Testing)
 
 ## Prerequisites
-- Node.js (v20.17.0)
-- npm (Node Package Manager)
-- MySQL Server (5.7 or higher recommended)
+- Ubuntu 24.04 LTS
+- Minimum 512MB RAM
+- Root/sudo access
+- SSH access
 
-## Local Setup
-1. **Clone the repository:**
-   `git clone [repository-url]`
+## Installation
 
-2. **Navigate to the project directory:**
-   `cd [project-directory]`
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd webapp
+```
 
-3. **Install dependencies:**
-   `npm install`
+2. Create application zip:
+```bash
+zip -r webapp.zip .
+```
 
-4. **Set up the environment variables:**
-   Create a `.env` file in the root directory of the project and add the environment variables
-5. **Start the application:**
-`npm start`
+3. Copy files to server:
+```bash
+scp -i ~/.ssh/your_key webapp.zip root@your-server:/tmp/
+scp -i ~/.ssh/your_key setup.sh root@your-server:/root/
+```
 
-## API Endpoints
+4. Run setup script:
+```bash
+bash setup.sh
+```
 
-### `GET /healthz`
-- **Description:** Performs a health check and logs the check in the database.
-- **Response Status Codes:**
-- `200 OK`: Health check was successful, and the system is operating normally.
-- `503 Service Unavailable`: Health check failed due to a server or database error.
+## Testing
+Run the test suite:
+```bash
+npm test
+```
 
-### `POST, PUT, DELETE /healthz`
-- **Description:** These methods are not allowed for this endpoint.
-- **Response Status Codes:**
-- `405 Method Not Allowed`: Indicates that the request method is not supported by the endpoint.
+## Security Features
+- Dedicated application user and group
+- MySQL security hardening
+- Proper file permissions
+- No-cache headers
+- Sniff prevention headers
 
-### `All other routes`
-- **Description:** Handles all other undefined routes.
-- **Response Status Codes:**
-- `404 Not Found`: The requested route does not exist.
-
-## Additional Information
-- The application uses headers to prevent caching and improve security by specifying:
-- `Cache-Control: no-cache, no-store, must-revalidate` to ensure responses are not cached.
-- `Pragma: no-cache` to avoid caching on older HTTP/1.0 proxies.
-- `X-Content-Type-Options: nosniff` to block browsers from MIME-sniffing a response away from the declared content-type.
+## Monitoring
+- Health check endpoint for uptime monitoring
+- Systemd service logs
+- MySQL error logs
