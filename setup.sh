@@ -117,8 +117,8 @@ sudo apt-get install -y unzip
 
 # Unzip application
 echo "Unzipping application..."
-if [ -f /tmp/webapp-fork.zip ]; then
-    sudo unzip -o /tmp/webapp-fork.zip -d "${APP_DIR}/"
+if [ -f /tmp/webapp.zip ]; then
+    sudo unzip -o /tmp/webapp.zip -d "${APP_DIR}/"
 else
     echo "Error: webapp.zip not found in /tmp directory"
     exit 1
@@ -151,7 +151,7 @@ EOF"
 
 # Update .env file using environment variables
 echo "Creating .env file..."
-sudo -u "${APP_USER}" bash -c "cat > ${APP_DIR}/webapp-fork/.env << EOF
+sudo -u "${APP_USER}" bash -c "cat > ${APP_DIR}/webapp/.env << EOF
 DB_NAME=${DB_NAME}
 DB_USER=${DB_USER}
 DB_PASS=${DB_ROOT_PASSWORD}
