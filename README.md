@@ -93,3 +93,45 @@ npm test
 - Health check endpoint for uptime monitoring
 - Systemd service logs
 - MySQL error logs
+
+# Assignment - 03
+
+# GitHub Actions for Webapp
+
+This repository uses GitHub Actions to run continuous integration (CI) tests for a Node.js-based web application that connects to a MySQL database. The workflow is automatically triggered on every pull request targeting the `main` branch.
+
+## Workflow Overview
+
+The CI workflow is defined in a YAML file and includes the following key configurations:
+
+- **Trigger:**  
+  The workflow is triggered when a pull request is opened against the `main` branch.
+
+- **Job Environment:**  
+  The job runs on an `ubuntu-latest` runner. It sets up a MySQL service using the official MySQL 8.0 Docker image and uses health checks to ensure the MySQL service is ready before running tests.
+
+- **MySQL Service Health Checks:**  
+  The MySQL container is configured with these options:
+  - `--health-cmd="mysqladmin ping --silent"`
+  - `--health-interval=10s`
+  - `--health-timeout=5s`
+  - `--health-retries=3`
+
+## Workflow Steps
+
+1. **Checkout Code:**  
+   Uses `actions/checkout@v3` to retrieve the repository code.
+
+2. **Setup Node.js:**  
+   Uses `actions/setup-node@v3` to install Node.js version 16.
+
+3. **Install Dependencies:**  
+   Executes `npm install` to install all required packages.
+
+4. **Wait for MySQL Service:**  
+   Runs a script that waits until the MySQL service is ready by checking if port `3306` is open.
+
+5. **Run Tests:**  
+   Executes `npm test` to run the application's test suite.
+
+This configuration ensures that every pull request is thoroughly tested against a live MySQL environment, maintaining code quality and stability.
