@@ -1,7 +1,7 @@
 name: Web App Tests
 
 on:
-  pull_request:
+  pull_request_target:
     branches: [ main ]
 
 jobs:
@@ -14,10 +14,10 @@ jobs:
         ports:
           - 3306:3306
         env:
-          MYSQL_ROOT_PASSWORD: rootpassword
-          MYSQL_DATABASE: test_db
-          MYSQL_USER: testuser
-          MYSQL_PASSWORD: testpassword
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
         options: >-
           --health-cmd="mysqladmin ping --silent" 
           --health-interval=10s 
@@ -26,11 +26,11 @@ jobs:
 
     env:
       # These environment variables are used by your application to connect to MySQL.
-      DB_NAME: test_db
-      DB_USER: testuser
-      DB_PASS: testpassword
-      DB_HOST: 127.0.0.1
-      PORT: 8080
+      DB_NAME: ${{ secrets.DB_NAME }}
+      DB_USER: ${{ secrets.DB_USER }}
+      DB_PASS: ${{ secrets.DB_PASS }}
+      DB_HOST: ${{ secrets.DB_HOST }}
+      PORT: ${{ secrets.DB_PORT }}
 
     steps:
       - name: Checkout code
