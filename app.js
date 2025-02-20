@@ -53,6 +53,7 @@ app.all('*', (req, res) => {
 
 const PORT = process.env.PORT || 8080;
 
+// Initializing the Server
 async function startServer() {
   try {
     const models = await initializeDatabase();
