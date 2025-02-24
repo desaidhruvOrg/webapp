@@ -183,70 +183,62 @@ jobs:
 
       - name: Initialize Packer
         working-directory: ./packer
-        run: packer validate \
-            -var "db_pass=${{ secrets.DB_PASS }}" \
-            -var "db_name=${{ secrets.DB_NAME }}" \
-            -var "db_user=${{ secrets.DB_USER }}" \
-            -var "vpc_id=${{ secrets.VPC_ID }}" \
-            -var "subnet_id=${{ secrets.SUBNET_ID }}" \
-            -var "aws_region=${{ secrets.AWS_REGION }}" \
-            aws-ubuntu.pkr.hcl
+        run: packer init aws-ubuntu.pkr.hcl
 
       - name: Validate Packer Template
         working-directory: ./packer
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          PKR_VAR_db_pass: ${{ secrets.DB_PASS }}
+          PKR_VAR_db_name: ${{ secrets.DB_NAME }}
+          PKR_VAR_db_user: ${{ secrets.DB_USER }}
+          PKR_VAR_vpc_id: ${{ secrets.VPC_ID }}
+          PKR_VAR_subnet_id: ${{ secrets.SUBNET_ID }}
+          PKR_VAR_aws_region: ${{ secrets.AWS_REGION }}
+          PKR_VAR_gcp_project_id: ${{ secrets.GCP_PROJECT_ID }}
           GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
-        run: packer validate .
+        run: packer validate aws-ubuntu.pkr.hcl
 
       - name: Build AMI
         working-directory: ./packer
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          PKR_VAR_db_pass: ${{ secrets.DB_PASS }}
+          PKR_VAR_db_name: ${{ secrets.DB_NAME }}
+          PKR_VAR_db_user: ${{ secrets.DB_USER }}
+          PKR_VAR_vpc_id: ${{ secrets.VPC_ID }}
+          PKR_VAR_subnet_id: ${{ secrets.SUBNET_ID }}
+          PKR_VAR_aws_region: ${{ secrets.AWS_REGION }}
+          PKR_VAR_gcp_project_id: ${{ secrets.GCP_PROJECT_ID }}
           GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
           GOOGLE_CLOUD_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
-          DB_NAME: ${{ secrets.DB_NAME }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASS: ${{ secrets.DB_PASS }}
-          DB_HOST: ${{ secrets.DB_HOST }}
-          DB_PORT: ${{ secrets.DB_PORT }}
-          VPC_ID: ${{ secrets.VPC_ID }}
-          SUBNET_ID: ${{ secrets.SUBNET_ID }}
-          DEV_USER: ${{ secrets.DEV_USER }}
-          DEMO_USER: ${{ secrets.DEMO_USER }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-        run: |
-          packer build \
-            -var "vpc_id=${{ secrets.VPC_ID }}" \
-            -var "subnet_id=${{ secrets.SUBNET_ID }}" \
-            -var "aws_region=${{ secrets.AWS_REGION }}" \
-            -var "db_name=${{ secrets.DB_NAME }}" \
-            -var "db_user=${{ secrets.DB_USER }}" \
-            -var "db_pass=${{ secrets.DB_PASS }}" \
-            -var "dev_user=${{ secrets.DEV_USER }}" \
-            -var "demo_user=${{ secrets.DEMO_USER }}" \
-            aws-ubuntu.pkr.hcl
+        run: packer build aws-ubuntu.pkr.hcl
 
       - name: Retrieve Latest AMI and Save AMI_ID
         id: share_ami
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
         run: |
           AMI_ID=$(aws ec2 describe-images \
             --owners self \
-            --filters "Name=state,Values=available" \
-            --query "Images | sort_by(@, &CreationDate)[-1].ImageId" \
-            --output text --region "$AWS_REGION")
+            --filters "Name=name,Values=webapp-ami-*" "Name=state,Values=available" \
+            --query "sort_by(Images, &CreationDate)[-1].ImageId" \
+            --output text --region "${AWS_REGION}")
           
           if [[ -n "$AMI_ID" && "$AMI_ID" != "None" ]]; then
             echo "Found latest AMI: $AMI_ID"
             
             # Share with both dev and demo accounts
-            aws ec2 modify-image-attribute --image-id "$AMI_ID" \
+            aws ec2 modify-image-attribute \
+              --image-id "$AMI_ID" \
               --launch-permission "{\"Add\": [{\"UserId\": \"${{ secrets.DEV_USER }}\"}, {\"UserId\": \"${{ secrets.DEMO_USER }}\"}]}" \
-              --region "$AWS_REGION"
+              --region "${AWS_REGION}"
             
-            echo "AMI_ID=$AMI_ID" >> $GITHUB_ENV
+            echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
             echo "$AMI_ID" > ami_id.txt
           else
             echo "No AMI found, exiting..."
@@ -259,13 +251,21 @@ jobs:
           name: ami_id
           path: ami_id.txt
           if-no-files-found: error
-          compression-level: 6
+          retention-days: 1
           overwrite: true
 
       - name: Save GCP Image ID
+        env:
+          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
         run: |
-          GCP_IMAGE_ID=$(gcloud compute images list --filter="name~'packer-*'" --sort-by="~creationTimestamp" --limit=1 --format="value(NAME)")
+          GCP_IMAGE_ID=$(gcloud compute images list \
+            --project="${GCP_PROJECT_ID}" \
+            --filter="name~'webapp-image-*'" \
+            --sort-by="~creationTimestamp" \
+            --limit=1 \
+            --format="value(NAME)")
           if [[ -n "$GCP_IMAGE_ID" ]]; then
+            echo "gcp_image_id=$GCP_IMAGE_ID" >> $GITHUB_OUTPUT
             echo "$GCP_IMAGE_ID" > gcp_image_id.txt
           else
             echo "No GCP image found"
