@@ -129,16 +129,21 @@ jobs:
           DB_USER: ${{secrets.DB_USER}}
           DB_HOST: "127.0.0.1"
 
-      # - name: Create build artifact
-      #   run: |
-      #     zip -r webapp.zip . -x "packer/*" -x ".git/*" -x ".github/*" -x "node_modules/*"
+      # First, create the webapp.zip
+      - name: Create build artifact
+        run: |
+          zip -r webapp.zip . -x "packer/*" -x ".git/*" -x ".github/*" -x "node_modules/*" -x "coverage/*"
 
+        # Then check if it exists
       - name: Check if webapp.zip Exists
         run: |
           if [ -f ./webapp.zip ]; then
             echo "webapp.zip exists."
+            ls -l webapp.zip
           else
             echo "webapp.zip does not exist."
+            pwd
+            ls -la
             exit 1
           fi
 
