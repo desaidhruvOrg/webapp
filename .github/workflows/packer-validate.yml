@@ -19,9 +19,14 @@ jobs:
           
       - name: Packer fmt
         working-directory: ./packer
-        run: packer fmt -check .
+        id: fmt
+        run: |
+          OUTPUT=$(packer fmt -check .)
+          echo "fmt_output=$OUTPUT" >> $GITHUB_OUTPUT
+          if [[ $OUTPUT == *"has formatting issues"* ]]; then
+            exit 1
+          fi
         continue-on-error: true
-        if: "contains(packer fmt -check ., 'has formatting issues')"
           
       - name: Packer validate
         working-directory: ./packer
