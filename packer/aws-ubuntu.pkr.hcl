@@ -11,7 +11,7 @@ packer {
   }
 }
 
-// Update variable names to match GitHub secrets
+// Update variable names to match GitHub
 variable "aws_region" {
   type    = string
   default = null
