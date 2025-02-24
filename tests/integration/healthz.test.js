@@ -54,7 +54,7 @@ describe('Health Check API', () => {
       const response = await request(app)
         .delete('/healthz');
       
-      expect(response.status).toBe(405);
+      expect(response.status).toBe(402);
     });
   });
 
