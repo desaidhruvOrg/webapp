@@ -2,7 +2,7 @@ name: Build AMI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, a04a ]
     paths:
       - 'packer/**'
       - '**.js'
@@ -18,10 +18,10 @@ jobs:
       mysql:
         image: mysql:latest
         env:
-          MYSQL_ROOT_PASSWORD: ${{secrets.DB_PASSWORD}}
+          MYSQL_ROOT_PASSWORD: ${{secrets.MYSQL_ROOT_PASSWORD}}
           DB_NAME: ${{secrets.DB_NAME}}
           DB_USER: ${{secrets.DB_USER}}
-          DB_PASSWORD: ${{secrets.DB_PASSWORD}}
+          DB_PASS: ${{secrets.DB_PASS}}
           GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
           GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
         ports:
@@ -49,7 +49,7 @@ jobs:
             "AWS_REGION"
             "DB_NAME"
             "DB_USER"
-            "DB_PASSWORD"
+            "DB_PASS"
             "GCP_PROJECT_ID"
             "GCP_SA_KEY"
             "GCP_CREDENTIALS_B64"
@@ -69,7 +69,7 @@ jobs:
           touch .env
           echo "DB_PORT=${{secrets.DB_PORT}}" >> .env
           echo "DB_NAME=${{secrets.DB_NAME}}" >> .env
-          echo "DB_PASSWORD=${{secrets.DB_PASSWORD}}" >> .env
+          echo "DB_PASS=${{secrets.DB_PASS}}" >> .env
           echo "DB_USER=${{secrets.DB_USER}}" >> .env
           echo "DB_HOST=${{secrets.DB_HOST}}" >> .env
           cat .env
@@ -86,7 +86,7 @@ jobs:
       - name: Configure Environment Variables
         run: |
           echo DB_USER=${{ secrets.DB_USER }}
-          echo DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          echo DB_PASS=${{ secrets.DB_PASS }}
           echo DB_NAME=${{ secrets.DB_NAME }}
           echo DB_HOST=${{ secrets.DB_HOST }}
           echo DB_PORT=${{ secrets.DB_PORT }}
@@ -103,7 +103,7 @@ jobs:
         env:
           DB_PORT: ${{secrets.DB_PORT}}
           DB_NAME: ${{secrets.DB_NAME}}
-          DB_PASSWORD: ${{secrets.DB_PASSWORD}}
+          DB_PASS: ${{secrets.DB_PASS}}
           DB_USER: ${{secrets.DB_USER}}
           DB_HOST: ${{secrets.DB_HOST}}
 
@@ -175,7 +175,7 @@ jobs:
           GOOGLE_CLOUD_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
           DB_NAME: ${{ secrets.DB_NAME }}
           DB_USER: ${{ secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_PASS: ${{ secrets.DB_PASS }}
           DB_HOST: ${{ secrets.DB_HOST }}
           DB_PORT: ${{ secrets.DB_PORT }}
           VPC_ID: ${{ secrets.VPC_ID }}
@@ -190,7 +190,7 @@ jobs:
             -var "aws_region=${{ secrets.AWS_REGION }}" \
             -var "db_name=${{ secrets.DB_NAME }}" \
             -var "db_user=${{ secrets.DB_USER }}" \
-            -var "db_password=${{ secrets.DB_PASSWORD }}" \
+            -var "db_pass=${{ secrets.DB_PASS }}" \
             -var "dev_user=${{ secrets.DEV_USER }}" \
             -var "demo_user=${{ secrets.DEMO_USER }}" \
             aws-ubuntu.pkr.hcl
@@ -207,8 +207,9 @@ jobs:
           if [[ -n "$AMI_ID" && "$AMI_ID" != "None" ]]; then
             echo "Found latest AMI: $AMI_ID"
             
+            # Share with both dev and demo accounts
             aws ec2 modify-image-attribute --image-id "$AMI_ID" \
-              --launch-permission "{\"Add\": [{\"UserId\": \"${{ secrets.DEMO_USER }}\"}]}" \
+              --launch-permission "{\"Add\": [{\"UserId\": \"${{ secrets.DEV_USER }}\"}, {\"UserId\": \"${{ secrets.DEMO_USER }}\"}]}" \
               --region "$AWS_REGION"
             
             echo "AMI_ID=$AMI_ID" >> $GITHUB_ENV
