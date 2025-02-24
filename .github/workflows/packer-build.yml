@@ -43,25 +43,49 @@ jobs:
       # Verify required secrets
       - name: Verify Required Secrets
         run: |
-          required_secrets=(
-            "AWS_ACCESS_KEY_ID"
-            "AWS_SECRET_ACCESS_KEY"
-            "AWS_REGION"
-            "DB_NAME"
-            "DB_USER"
-            "DB_PASS"
-            "GCP_PROJECT_ID"
-            "GCP_SA_KEY"
-            "GCP_CREDENTIALS_B64"
-            "VPC_ID"
-            "SUBNET_ID"
-          )
-          for secret in "${required_secrets[@]}"; do
-            if [ -z "${{ secrets[secret] }}" ]; then
-              echo "Error: $secret is not set"
-              exit 1
-            fi
-          done
+          missing_secrets=()
+          
+          # Check each required secret
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            missing_secrets+=("AWS_ACCESS_KEY_ID")
+          fi
+          if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+            missing_secrets+=("AWS_SECRET_ACCESS_KEY")
+          fi
+          if [ -z "${{ secrets.AWS_REGION }}" ]; then
+            missing_secrets+=("AWS_REGION")
+          fi
+          if [ -z "${{ secrets.DB_NAME }}" ]; then
+            missing_secrets+=("DB_NAME")
+          fi
+          if [ -z "${{ secrets.DB_USER }}" ]; then
+            missing_secrets+=("DB_USER")
+          fi
+          if [ -z "${{ secrets.DB_PASS }}" ]; then
+            missing_secrets+=("DB_PASS")
+          fi
+          if [ -z "${{ secrets.GCP_PROJECT_ID }}" ]; then
+            missing_secrets+=("GCP_PROJECT_ID")
+          fi
+          if [ -z "${{ secrets.GCP_SA_KEY }}" ]; then
+            missing_secrets+=("GCP_SA_KEY")
+          fi
+          if [ -z "${{ secrets.GCP_CREDENTIALS_B64 }}" ]; then
+            missing_secrets+=("GCP_CREDENTIALS_B64")
+          fi
+          if [ -z "${{ secrets.VPC_ID }}" ]; then
+            missing_secrets+=("VPC_ID")
+          fi
+          if [ -z "${{ secrets.SUBNET_ID }}" ]; then
+            missing_secrets+=("SUBNET_ID")
+          fi
+          
+          # Check if any secrets are missing
+          if [ ${#missing_secrets[@]} -ne 0 ]; then
+            echo "Error: The following secrets are not set:"
+            printf '%s\n' "${missing_secrets[@]}"
+            exit 1
+          fi
 
       # Create .env file
       - name: Create .env file
