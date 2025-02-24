@@ -18,12 +18,10 @@ jobs:
       mysql:
         image: mysql:latest
         env:
-          MYSQL_ROOT_PASSWORD: ${{secrets.MYSQL_ROOT_PASSWORD}}
-          DB_NAME: ${{secrets.DB_NAME}}
-          DB_USER: ${{secrets.DB_USER}}
-          DB_PASS: ${{secrets.DB_PASS}}
-          GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+          MYSQL_ROOT_PASSWORD: ${{secrets.DB_PASS}}
+          MYSQL_DATABASE: ${{secrets.DB_NAME}}
+          MYSQL_USER: ${{secrets.DB_USER}}
+          MYSQL_PASSWORD: ${{secrets.DB_PASS}}
         ports:
           - 3306:3306
         options: >-
@@ -125,22 +123,27 @@ jobs:
       - name: Run tests
         run: npm test
         env:
-          DB_PORT: ${{secrets.DB_PORT}}
+          DB_PORT: 3306
           DB_NAME: ${{secrets.DB_NAME}}
           DB_PASS: ${{secrets.DB_PASS}}
           DB_USER: ${{secrets.DB_USER}}
-          DB_HOST: ${{secrets.DB_HOST}}
+          DB_HOST: "127.0.0.1"
 
-      # - name: Create build artifact
-      #   run: |
-      #     zip -r webapp.zip . -x "packer/*" -x ".git/*" -x ".github/*" -x "node_modules/*"
+      # First, create the webapp.zip
+      - name: Create build artifact
+        run: |
+          zip -r webapp.zip . -x "packer/*" -x ".git/*" -x ".github/*" -x "node_modules/*" -x "coverage/*"
 
+        # Then check if it exists
       - name: Check if webapp.zip Exists
         run: |
           if [ -f ./webapp.zip ]; then
             echo "webapp.zip exists."
+            ls -l webapp.zip
           else
             echo "webapp.zip does not exist."
+            pwd
+            ls -la
             exit 1
           fi
 
