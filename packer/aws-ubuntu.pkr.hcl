@@ -136,7 +136,7 @@ build {
 
   provisioner "shell" {
     environment_vars = [
-      "DB_PASS=${var.db_pass}",  // Updated to match GitHub secrets
+      "DB_PASS=${var.db_pass}",
       "DB_NAME=${var.db_name}",
       "DB_USER=${var.db_user}",
       "PORT=8080"
