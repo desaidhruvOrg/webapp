@@ -183,7 +183,14 @@ jobs:
 
       - name: Initialize Packer
         working-directory: ./packer
-        run: packer init aws-ubuntu.pkr.hcl
+        run: packer validate \
+            -var "db_pass=${{ secrets.DB_PASS }}" \
+            -var "db_name=${{ secrets.DB_NAME }}" \
+            -var "db_user=${{ secrets.DB_USER }}" \
+            -var "vpc_id=${{ secrets.VPC_ID }}" \
+            -var "subnet_id=${{ secrets.SUBNET_ID }}" \
+            -var "aws_region=${{ secrets.AWS_REGION }}" \
+            aws-ubuntu.pkr.hcl
 
       - name: Validate Packer Template
         working-directory: ./packer
