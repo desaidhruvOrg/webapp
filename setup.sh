@@ -11,7 +11,7 @@ if [ -z "$DB_ROOT_PASSWORD" ] || [ -z "$DB_NAME" ] || [ -z "$DB_USER" ]; then
 fi
 
 # Variables
-APP_USER="csye6225-cloud"
+APP_USER="csye6225"
 APP_GROUP="csye6225"
 APP_DIR="/opt/csye6225"
 
@@ -59,7 +59,7 @@ max_heap_table_size = 16M
 EOF"
 
 # Clean up any existing MySQL files and restart
-echo "Cleaning up MySQL files..."
+echo "Cleaning up MySQL files and restarting..."
 sudo systemctl stop mysql || true
 sudo rm -rf /var/lib/mysql/*
 sudo mkdir -p /var/lib/mysql
@@ -70,18 +70,29 @@ sudo mysqld --initialize-insecure --user=mysql
 # Start MySQL service
 echo "Starting MySQL service..."
 sudo systemctl start mysql
+if ! sudo systemctl is-active --quiet mysql; then
+    echo "Failed to start MySQL"
+    exit 1
+fi
 sudo systemctl enable mysql
 
 # Secure MySQL installation
 echo "Configuring MySQL root password..."
 sudo mysql --user=root <<EOF
-ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '${DB_ROOT_PASSWORD}';
+ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$DB_ROOT_PASSWORD';
 FLUSH PRIVILEGES;
 EOF
 
-# Now use the password for subsequent commands
+# Verify MySQL root password
+echo "Verifying MySQL root password..."
+if ! sudo mysql -u root -p"$DB_ROOT_PASSWORD" -e "SHOW DATABASES;"; then
+    echo "Failed to connect to MySQL with root password"
+    exit 1
+fi
+
+# Secure MySQL installation
 echo "Securing MySQL installation..."
-sudo mysql -u root -p"${DB_ROOT_PASSWORD}" <<EOF
+sudo mysql -u root -p"$DB_ROOT_PASSWORD" <<EOF
 DELETE FROM mysql.user WHERE User='';
 DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
 DROP DATABASE IF EXISTS test;
@@ -89,10 +100,12 @@ DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
 FLUSH PRIVILEGES;
 EOF
 
-# Create application database
-echo "Creating database..."
-sudo mysql -u root -p"${DB_ROOT_PASSWORD}" <<EOF
-CREATE DATABASE IF NOT EXISTS ${DB_NAME};
+# Create application database and user
+echo "Creating database and user..."
+sudo mysql -u root -p"$DB_ROOT_PASSWORD" <<EOF
+CREATE DATABASE IF NOT EXISTS $DB_NAME;
+CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED WITH mysql_native_password BY '$DB_ROOT_PASSWORD';
+GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost';
 FLUSH PRIVILEGES;
 EOF
 
@@ -103,13 +116,20 @@ sudo apt-get install -y nodejs
 
 # Create application group and user
 echo "Creating application group and user..."
-sudo groupadd -f "${APP_GROUP}"
-sudo useradd -m -g "${APP_GROUP}" -s /bin/bash "${APP_USER}" 2>/dev/null || true
+sudo groupadd -f "$APP_GROUP"
+# Update the user creation line
+sudo useradd -m -g "$APP_GROUP" -s /usr/sbin/nologin "$APP_USER" 2>/dev/null || true
+
+# Verify application user
+if ! id -u "$APP_USER" >/dev/null 2>&1; then
+    echo "Failed to create application user $APP_USER"
+    exit 1
+fi
 
 # Create application directory and unzip webapp
 echo "Setting up application directory..."
-sudo mkdir -p "${APP_DIR}"
-sudo chown -R "${APP_USER}:${APP_GROUP}" "${APP_DIR}"
+sudo mkdir -p "$APP_DIR"
+sudo chown -R "$APP_USER:$APP_GROUP" "$APP_DIR"
 
 # Install unzip if not present
 echo "Installing unzip..."
@@ -117,8 +137,8 @@ sudo apt-get install -y unzip
 
 # Unzip application
 echo "Unzipping application..."
-if [ -f /tmp/webapp.zip ]; then
-    sudo unzip -o /tmp/webapp.zip -d "${APP_DIR}/"
+if [ -f "/tmp/webapp.zip" ]; then
+    sudo unzip -o "/tmp/webapp.zip" -d "$APP_DIR/"
 else
     echo "Error: webapp.zip not found in /tmp directory"
     exit 1
@@ -126,10 +146,11 @@ fi
 
 # Set permissions
 echo "Setting permissions..."
-sudo chown -R "${APP_USER}:${APP_GROUP}" "${APP_DIR}"
-sudo chmod -R 755 "${APP_DIR}"
+sudo chown -R "$APP_USER:$APP_GROUP" "$APP_DIR"
+sudo chmod -R 755 "$APP_DIR"
 
 # Create systemd service file
+# Update WorkingDirectory in systemd service
 echo "Creating systemd service..."
 sudo bash -c "cat > /etc/systemd/system/webapp.service << EOF
 [Unit]
@@ -138,9 +159,9 @@ After=network.target mysql.service
 
 [Service]
 Type=simple
-User=${APP_USER}
-Group=${APP_GROUP}
-WorkingDirectory=${APP_DIR}
+User=$APP_USER
+Group=$APP_GROUP
+WorkingDirectory=$APP_DIR
 ExecStart=/usr/bin/npm start
 Restart=always
 Environment=NODE_ENV=production
@@ -149,14 +170,41 @@ Environment=NODE_ENV=production
 WantedBy=multi-user.target
 EOF"
 
+# Verify systemd service
+echo "Verifying systemd service..."
+if ! sudo systemctl daemon-reload; then
+    echo "Failed to reload systemd daemon"
+    exit 1
+fi
+
+if ! sudo systemctl enable webapp.service; then
+    echo "Failed to enable webapp service"
+    exit 1
+fi
+
+if ! sudo systemctl start webapp.service; then
+    echo "Failed to start webapp service"
+    exit 1
+fi
+
+if ! sudo systemctl is-active --quiet webapp.service; then
+    echo "Webapp service is not running"
+    exit 1
+fi
+
 # Update .env file using environment variables
+# Update .env file path
 echo "Creating .env file..."
-sudo -u "${APP_USER}" bash -c "cat > ${APP_DIR}/webapp/.env << EOF
-DB_NAME=${DB_NAME}
-DB_USER=${DB_USER}
-DB_PASS=${DB_ROOT_PASSWORD}
-DB_HOST=${DB_HOST:-localhost}
-PORT=${PORT:-8080}
+sudo -u "$APP_USER" bash -c "cat > $APP_DIR/.env << EOF
+DB_NAME=$DB_NAME
+DB_USER=$DB_USER
+DB_PASS=$DB_ROOT_PASSWORD
+DB_HOST=localhost
+PORT=8080
 EOF"
+
+# Update .env file permissions
+sudo chown "$APP_USER:$APP_GROUP" "$APP_DIR/.env"
+sudo chmod 600 "$APP_DIR/.env"
 
 echo "Setup completed successfully!"

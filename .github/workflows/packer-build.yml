@@ -1,0 +1,275 @@
+name: Build AMI
+
+on:
+  push:
+    branches: [ main, a04a ]
+    paths:
+      - 'packer/**'
+      - '**.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'setup.sh'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:latest
+        env:
+          MYSQL_ROOT_PASSWORD: ${{secrets.DB_PASS}}
+          MYSQL_DATABASE: ${{secrets.DB_NAME}}
+          MYSQL_USER: ${{secrets.DB_USER}}
+          MYSQL_PASSWORD: ${{secrets.DB_PASS}}
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upload Zip File
+        uses: actions/upload-artifact@v4
+        with:
+          name: webapp zip creation
+          path: webapp.zip
+
+      # Verify required secrets
+      - name: Verify Required Secrets
+        run: |
+          missing_secrets=()
+          
+          # Check each required secret
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            missing_secrets+=("AWS_ACCESS_KEY_ID")
+          fi
+          if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+            missing_secrets+=("AWS_SECRET_ACCESS_KEY")
+          fi
+          if [ -z "${{ secrets.AWS_REGION }}" ]; then
+            missing_secrets+=("AWS_REGION")
+          fi
+          if [ -z "${{ secrets.DB_NAME }}" ]; then
+            missing_secrets+=("DB_NAME")
+          fi
+          if [ -z "${{ secrets.DB_USER }}" ]; then
+            missing_secrets+=("DB_USER")
+          fi
+          if [ -z "${{ secrets.DB_PASS }}" ]; then
+            missing_secrets+=("DB_PASS")
+          fi
+          if [ -z "${{ secrets.GCP_PROJECT_ID }}" ]; then
+            missing_secrets+=("GCP_PROJECT_ID")
+          fi
+          if [ -z "${{ secrets.GCP_SA_KEY }}" ]; then
+            missing_secrets+=("GCP_SA_KEY")
+          fi
+          if [ -z "${{ secrets.GCP_CREDENTIALS_B64 }}" ]; then
+            missing_secrets+=("GCP_CREDENTIALS_B64")
+          fi
+          if [ -z "${{ secrets.VPC_ID }}" ]; then
+            missing_secrets+=("VPC_ID")
+          fi
+          if [ -z "${{ secrets.SUBNET_ID }}" ]; then
+            missing_secrets+=("SUBNET_ID")
+          fi
+          
+          # Check if any secrets are missing
+          if [ ${#missing_secrets[@]} -ne 0 ]; then
+            echo "Error: The following secrets are not set:"
+            printf '%s\n' "${missing_secrets[@]}"
+            exit 1
+          fi
+
+      # Create .env file
+      - name: Create .env file
+        run: |
+          touch .env
+          echo "DB_PORT=${{secrets.DB_PORT}}" >> .env
+          echo "DB_NAME=${{secrets.DB_NAME}}" >> .env
+          echo "DB_PASS=${{secrets.DB_PASS}}" >> .env
+          echo "DB_USER=${{secrets.DB_USER}}" >> .env
+          echo "DB_HOST=${{secrets.DB_HOST}}" >> .env
+          cat .env
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure Environment Variables
+        run: |
+          echo DB_USER=${{ secrets.DB_USER }}
+          echo DB_PASS=${{ secrets.DB_PASS }}
+          echo DB_NAME=${{ secrets.DB_NAME }}
+          echo DB_HOST=${{ secrets.DB_HOST }}
+          echo DB_PORT=${{ secrets.DB_PORT }}
+
+      - name: Wait for MySQL
+        run: |
+          until mysqladmin ping -h "127.0.0.1" --silent; do
+            echo "Waiting for MySQL to be ready..."
+            sleep 5
+          done
+
+      - name: Run tests
+        run: npm test
+        env:
+          DB_PORT: 3306
+          DB_NAME: ${{secrets.DB_NAME}}
+          DB_PASS: ${{secrets.DB_PASS}}
+          DB_USER: ${{secrets.DB_USER}}
+          DB_HOST: "127.0.0.1"
+
+      # - name: Create build artifact
+      #   run: |
+      #     zip -r webapp.zip . -x "packer/*" -x ".git/*" -x ".github/*" -x "node_modules/*"
+
+      - name: Check if webapp.zip Exists
+        run: |
+          if [ -f ./webapp.zip ]; then
+            echo "webapp.zip exists."
+          else
+            echo "webapp.zip does not exist."
+            exit 1
+          fi
+
+      - name: Setup GCP Credentials
+        run: |
+          echo "${{ secrets.GCP_CREDENTIALS_B64 }}" | base64 -d > gcp-credentials.json
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Verify AWS Credentials
+        run: aws sts get-caller-identity
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          export_default_credentials: true
+
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          create_credentials_file: true
+          export_environment_variables: true
+          cleanup_credentials: true
+
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@main
+        with:
+          version: "1.9.4"
+
+      - name: Initialize Packer
+        working-directory: ./packer
+        run: packer init aws-ubuntu.pkr.hcl
+
+      - name: Validate Packer Template
+        working-directory: ./packer
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
+        run: packer validate .
+
+      - name: Build AMI
+        working-directory: ./packer
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
+          GOOGLE_CLOUD_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASS: ${{ secrets.DB_PASS }}
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          VPC_ID: ${{ secrets.VPC_ID }}
+          SUBNET_ID: ${{ secrets.SUBNET_ID }}
+          DEV_USER: ${{ secrets.DEV_USER }}
+          DEMO_USER: ${{ secrets.DEMO_USER }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        run: |
+          packer build \
+            -var "vpc_id=${{ secrets.VPC_ID }}" \
+            -var "subnet_id=${{ secrets.SUBNET_ID }}" \
+            -var "aws_region=${{ secrets.AWS_REGION }}" \
+            -var "db_name=${{ secrets.DB_NAME }}" \
+            -var "db_user=${{ secrets.DB_USER }}" \
+            -var "db_pass=${{ secrets.DB_PASS }}" \
+            -var "dev_user=${{ secrets.DEV_USER }}" \
+            -var "demo_user=${{ secrets.DEMO_USER }}" \
+            aws-ubuntu.pkr.hcl
+
+      - name: Retrieve Latest AMI and Save AMI_ID
+        id: share_ami
+        run: |
+          AMI_ID=$(aws ec2 describe-images \
+            --owners self \
+            --filters "Name=state,Values=available" \
+            --query "Images | sort_by(@, &CreationDate)[-1].ImageId" \
+            --output text --region "$AWS_REGION")
+          
+          if [[ -n "$AMI_ID" && "$AMI_ID" != "None" ]]; then
+            echo "Found latest AMI: $AMI_ID"
+            
+            # Share with both dev and demo accounts
+            aws ec2 modify-image-attribute --image-id "$AMI_ID" \
+              --launch-permission "{\"Add\": [{\"UserId\": \"${{ secrets.DEV_USER }}\"}, {\"UserId\": \"${{ secrets.DEMO_USER }}\"}]}" \
+              --region "$AWS_REGION"
+            
+            echo "AMI_ID=$AMI_ID" >> $GITHUB_ENV
+            echo "$AMI_ID" > ami_id.txt
+          else
+            echo "No AMI found, exiting..."
+            exit 1
+          fi
+
+      - name: Upload AWS AMI ID Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ami_id
+          path: ami_id.txt
+          if-no-files-found: error
+          compression-level: 6
+          overwrite: true
+
+      - name: Save GCP Image ID
+        run: |
+          GCP_IMAGE_ID=$(gcloud compute images list --filter="name~'packer-*'" --sort-by="~creationTimestamp" --limit=1 --format="value(NAME)")
+          if [[ -n "$GCP_IMAGE_ID" ]]; then
+            echo "$GCP_IMAGE_ID" > gcp_image_id.txt
+          else
+            echo "No GCP image found"
+            exit 1
+          fi
+
+      - name: Upload GCP AMI ID Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gcp_image_id
+          path: gcp_image_id.txt
+
+      - name: Cleanup on Failure
+        if: failure()
+        run: |
+          echo "Workflow failed! Cleaning up resources..."
+          # Add cleanup steps here
+          # Example: Remove any temporary files or resources created during the workflow
+          rm -f ami_id.txt gcp_image_id.txt
