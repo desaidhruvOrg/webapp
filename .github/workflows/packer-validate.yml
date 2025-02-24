@@ -2,7 +2,7 @@ name: Validate Packer Configuration
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [ main, a04a ]
     paths:
       - 'packer/**'
 
