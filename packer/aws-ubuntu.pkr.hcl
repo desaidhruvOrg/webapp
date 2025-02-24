@@ -33,7 +33,7 @@ variable "subnet_id" {
 }
 
 // Remove aws_profile as we're using direct credentials from GitHub secrets
-variable "db_pass" {  // Changed from db_root_password to match GitHub secrets
+variable "db_pass" {
   type    = string
   sensitive = true
 }
