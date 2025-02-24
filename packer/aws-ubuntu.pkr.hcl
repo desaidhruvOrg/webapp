@@ -89,17 +89,9 @@ source "amazon-ebs" "ubuntu" {
     Project = "csye6225"
   }
 
-  # Volume configuration for root
-  root_block_device {
-    volume_size           = 25
-    volume_type           = "gp2"
-    delete_on_termination = true
-  }
-
-  # Launch block device mappings
   launch_block_device_mappings {
     device_name           = "/dev/sda1"
-    volume_size           = 25
+    volume_size          = 25
     volume_type          = "gp2"
     delete_on_termination = true
   }
@@ -113,7 +105,7 @@ source "googlecompute" "ubuntu" {
   ssh_username        = "ubuntu"
   image_name          = "webapp-image-${formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())}"
   
-  instance_name       = "packer-builder-${uuid()}"
+  instance_name       = "packer-${formatdate("YYYYMMDD-hhmmss", timestamp())}"
   machine_type        = "e2-micro"
 }
 
