@@ -71,7 +71,7 @@ variable "vpc_id" {
 source "amazon-ebs" "ubuntu" {
   ami_name      = "webapp-ami-${formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())}"
   instance_type = "t2.micro"
-  // Remove profile as we're using GitHub Actions credentials
+  
   region        = var.aws_region
   vpc_id        = var.vpc_id
   
