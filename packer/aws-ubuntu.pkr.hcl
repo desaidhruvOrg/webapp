@@ -143,7 +143,7 @@ build {
     ]
     inline = [
       "echo 'Debugging environment variables:'",
-      "echo DB_PASS=${var.db_pass}",  // Updated debug output
+      "echo DB_PASS=${var.db_pass}",
       "echo DB_NAME=${var.db_name}",
       "echo DB_USER=${var.db_user}",
       "chmod +x /tmp/setup.sh",
