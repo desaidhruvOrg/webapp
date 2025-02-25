@@ -100,7 +100,7 @@ source "amazon-ebs" "ubuntu" {
 // Add parallel GCP builder
 source "googlecompute" "ubuntu" {
   project_id          = var.gcp_project_id
-  source_image_family = "ubuntu-2404-lts"
+  source_image_family = "ubuntu-2204-lts"
   zone                = var.gcp_zone
   ssh_username        = "ubuntu"
   image_name          = "webapp-image-${formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())}"
