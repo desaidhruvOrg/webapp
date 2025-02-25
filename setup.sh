@@ -4,9 +4,9 @@
 set -e
 
 # Check required environment variables
-if [ -z "$DB_ROOT_PASSWORD" ] || [ -z "$DB_NAME" ] || [ -z "$DB_USER" ]; then
+if [ -z "$DB_PASS" ] || [ -z "$DB_NAME" ] || [ -z "$DB_USER" ]; then
     echo "Error: Required environment variables not set"
-    echo "Please export: DB_ROOT_PASSWORD, DB_NAME, DB_USER"
+    echo "Please export: DB_PASS, DB_NAME, DB_USER"
     exit 1
 fi
 
@@ -79,20 +79,20 @@ sudo systemctl enable mysql
 # Secure MySQL installation
 echo "Configuring MySQL root password..."
 sudo mysql --user=root <<EOF
-ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$DB_ROOT_PASSWORD';
+ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$DB_PASS';
 FLUSH PRIVILEGES;
 EOF
 
 # Verify MySQL root password
 echo "Verifying MySQL root password..."
-if ! sudo mysql -u root -p"$DB_ROOT_PASSWORD" -e "SHOW DATABASES;"; then
+if ! sudo mysql -u root -p"$DB_PASS" -e "SHOW DATABASES;"; then
     echo "Failed to connect to MySQL with root password"
     exit 1
 fi
 
 # Secure MySQL installation
 echo "Securing MySQL installation..."
-sudo mysql -u root -p"$DB_ROOT_PASSWORD" <<EOF
+sudo mysql -u root -p"$DB_PASS" <<EOF
 DELETE FROM mysql.user WHERE User='';
 DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
 DROP DATABASE IF EXISTS test;
@@ -102,9 +102,9 @@ EOF
 
 # Create application database and user
 echo "Creating database and user..."
-sudo mysql -u root -p"$DB_ROOT_PASSWORD" <<EOF
+sudo mysql -u root -p"$DB_PASS" <<EOF
 CREATE DATABASE IF NOT EXISTS $DB_NAME;
-CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED WITH mysql_native_password BY '$DB_ROOT_PASSWORD';
+CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED WITH mysql_native_password BY '$DB_PASS';
 GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost';
 FLUSH PRIVILEGES;
 EOF
@@ -198,7 +198,7 @@ echo "Creating .env file..."
 sudo -u "$APP_USER" bash -c "cat > $APP_DIR/.env << EOF
 DB_NAME=$DB_NAME
 DB_USER=$DB_USER
-DB_PASS=$DB_ROOT_PASSWORD
+DB_PASS=$DB_PASS
 DB_HOST=localhost
 PORT=8080
 EOF"
