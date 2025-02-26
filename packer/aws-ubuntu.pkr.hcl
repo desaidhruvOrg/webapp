@@ -115,11 +115,11 @@ source "googlecompute" "ubuntu" {
   instance_name       = "packer-${formatdate("YYYYMMDD-hhmmss", timestamp())}"
   machine_type        = "e2-micro"
   
-  // Add these lines
-  startup_script_timeout = "10m"
+  // Replace invalid parameter with correct ones
   metadata = {
     enable-oslogin = "FALSE"
   }
+  state_timeout = "10m"
 }
 
 build {
