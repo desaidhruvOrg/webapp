@@ -40,9 +40,21 @@ fi
 
 # Install MySQL with reduced memory configuration
 echo "Installing MySQL..."
-sudo apt-get install -y mysql-server
+# Add repository and install MySQL
+sudo apt-get update
+sudo apt-get install -y wget gnupg
+wget https://dev.mysql.com/get/mysql-apt-config_0.8.24-1_all.deb
+sudo DEBIAN_FRONTEND=noninteractive dpkg -i mysql-apt-config_0.8.24-1_all.deb
+sudo apt-get update
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server
 
-# Configure MySQL for low memory usage
+# Clean up downloaded files
+rm mysql-apt-config_0.8.24-1_all.deb
+
+# Ensure MySQL configuration directory exists
+sudo mkdir -p /etc/mysql/mysql.conf.d
+
+# Configure MySQL for low memory usage and authentication
 echo "Configuring MySQL for low memory usage..."
 sudo bash -c "cat > /etc/mysql/mysql.conf.d/mysqld.cnf << EOF
 [mysqld]
@@ -56,7 +68,14 @@ host_cache_size = 0
 table_open_cache = 256
 tmp_table_size = 16M
 max_heap_table_size = 16M
+default_authentication_plugin = mysql_native_password
 EOF"
+
+# Verify MySQL installation
+if ! command -v mysql &> /dev/null; then
+    echo "MySQL installation failed"
+    exit 1
+fi
 
 # Clean up any existing MySQL files and restart
 echo "Cleaning up MySQL files and restarting..."

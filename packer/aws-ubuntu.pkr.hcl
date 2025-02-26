@@ -114,6 +114,12 @@ source "googlecompute" "ubuntu" {
   image_name          = "webapp-image-${formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())}"
   instance_name       = "packer-${formatdate("YYYYMMDD-hhmmss", timestamp())}"
   machine_type        = "e2-micro"
+  
+  // Add these lines
+  startup_script_timeout = "10m"
+  metadata = {
+    enable-oslogin = "FALSE"
+  }
 }
 
 build {
@@ -121,6 +127,15 @@ build {
     "source.amazon-ebs.ubuntu",
     "source.googlecompute.ubuntu"
   ]
+  
+  // Add this provisioner before file transfers
+  provisioner "shell" {
+    inline = [
+      "sudo apt-get update",
+      "sudo apt-get install -y unzip",
+      "sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y"
+    ]
+  }
   
   provisioner "file" {
     source      = "${path.root}/../webapp.zip"
