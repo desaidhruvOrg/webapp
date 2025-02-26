@@ -67,6 +67,12 @@ variable "vpc_id" {
   default = null
 }
 
+variable "demo_user" {
+  type        = string
+  description = "AWS account ID for demo environment"
+  sensitive   = true
+}
+
 source "amazon-ebs" "ubuntu" {
   ami_name      = "webapp-ami-${formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())}"
   instance_type = "t2.micro"
@@ -83,6 +89,8 @@ source "amazon-ebs" "ubuntu" {
     delay_seconds = 30
     max_attempts  = 50
   }
+
+  ami_users = [var.demo_user]  // Add this line to share AMI
 
   tags = {
     Name    = "webapp-ami"
@@ -104,7 +112,6 @@ source "googlecompute" "ubuntu" {
   zone                = var.gcp_zone
   ssh_username        = "ubuntu"
   image_name          = "webapp-image-${formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())}"
-  
   instance_name       = "packer-${formatdate("YYYYMMDD-hhmmss", timestamp())}"
   machine_type        = "e2-micro"
 }
