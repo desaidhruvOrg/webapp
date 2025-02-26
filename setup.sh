@@ -22,15 +22,11 @@ sudo apt-get upgrade -y
 
 # Create swap file
 echo "Setting up swap space..."
-# Check if swap already exists
 if grep -q "/swapfile" /etc/fstab; then
     echo "Swap file already exists, skipping swap creation..."
 else
-    # Remove any existing swapfile
     sudo swapoff /swapfile || true
     sudo rm -f /swapfile
-    
-    # Create new swap
     sudo fallocate -l 1G /swapfile
     sudo chmod 600 /swapfile
     sudo mkswap /swapfile
@@ -38,90 +34,81 @@ else
     echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 fi
 
-# Install MySQL with reduced memory configuration
-echo "Installing MySQL..."
-# Add repository and install MySQL
+# Install MySQL prerequisites
+echo "Installing MySQL prerequisites..."
 sudo apt-get update
-sudo apt-get install -y wget gnupg
-wget https://dev.mysql.com/get/mysql-apt-config_0.8.24-1_all.deb
-sudo DEBIAN_FRONTEND=noninteractive dpkg -i mysql-apt-config_0.8.24-1_all.deb
+sudo apt-get install -y wget gnupg lsb-release
+
+# Add MySQL repository properly
+echo "Adding MySQL repository..."
+curl -fsSL https://repo.mysql.com/RPM-GPG-KEY-mysql-2023 | sudo gpg --dearmor -o /usr/share/keyrings/mysql-keyring.gpg
+echo "deb [signed-by=/usr/share/keyrings/mysql-keyring.gpg] http://repo.mysql.com/apt/ubuntu $(lsb_release -sc) mysql-8.0" | sudo tee /etc/apt/sources.list.d/mysql.list
+
+# Install MySQL
+echo "Installing MySQL..."
 sudo apt-get update
 sudo DEBIAN_FRONTEND=noninteractive apt-get install -y mysql-server
 
-# Clean up downloaded files
-rm mysql-apt-config_0.8.24-1_all.deb
-
-# Ensure MySQL configuration directory exists
-sudo mkdir -p /etc/mysql/mysql.conf.d
-
-# Configure MySQL for low memory usage and authentication
-echo "Configuring MySQL for low memory usage..."
-sudo bash -c "cat > /etc/mysql/mysql.conf.d/mysqld.cnf << EOF
-[mysqld]
-performance_schema = off
-key_buffer_size = 8M
-max_connections = 10
-innodb_buffer_pool_size = 64M
-innodb_log_buffer_size = 2M
-thread_cache_size = 4
-host_cache_size = 0
-table_open_cache = 256
-tmp_table_size = 16M
-max_heap_table_size = 16M
-default_authentication_plugin = mysql_native_password
-EOF"
-
-# Verify MySQL installation
-if ! command -v mysql &> /dev/null; then
-    echo "MySQL installation failed"
-    exit 1
-fi
-
-# Clean up any existing MySQL files and restart
-echo "Cleaning up MySQL files and restarting..."
+# Stop MySQL and prepare for configuration
+echo "Configuring MySQL..."
 sudo systemctl stop mysql || true
+
+# Clean and prepare MySQL directories
 sudo rm -rf /var/lib/mysql/*
 sudo mkdir -p /var/lib/mysql
 sudo chown -R mysql:mysql /var/lib/mysql
 sudo chmod 750 /var/lib/mysql
+
+# Configure MySQL
+sudo mkdir -p /etc/mysql/mysql.conf.d
+sudo bash -c "cat > /etc/mysql/mysql.conf.d/mysqld.cnf << EOF
+[mysqld]
+bind-address = 127.0.0.1
+performance_schema = off
+key_buffer_size = 16M
+max_connections = 15
+innodb_buffer_pool_size = 128M
+innodb_log_buffer_size = 4M
+thread_cache_size = 8
+table_open_cache = 256
+tmp_table_size = 32M
+max_heap_table_size = 32M
+default_authentication_plugin = mysql_native_password
+innodb_file_per_table = 1
+innodb_flush_method = O_DIRECT
+innodb_flush_log_at_trx_commit = 2
+EOF"
+
+# Initialize MySQL
+echo "Initializing MySQL..."
 sudo mysqld --initialize-insecure --user=mysql
 
-# Start MySQL service
-echo "Starting MySQL service..."
+# Start MySQL with timeout
+echo "Starting MySQL..."
 sudo systemctl start mysql
-if ! sudo systemctl is-active --quiet mysql; then
-    echo "Failed to start MySQL"
+
+# Wait for MySQL to start
+timeout=60
+while ! sudo systemctl is-active --quiet mysql && [ $timeout -gt 0 ]; do
+    sleep 1
+    timeout=$((timeout-1))
+done
+
+if [ $timeout -eq 0 ]; then
+    echo "Timeout waiting for MySQL to start"
     exit 1
 fi
+
 sudo systemctl enable mysql
 
-# Secure MySQL installation
-echo "Configuring MySQL root password..."
+# Configure MySQL security
+echo "Configuring MySQL security..."
 sudo mysql --user=root <<EOF
 ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$DB_PASS';
-FLUSH PRIVILEGES;
-EOF
-
-# Verify MySQL root password
-echo "Verifying MySQL root password..."
-if ! sudo mysql -u root -p"$DB_PASS" -e "SHOW DATABASES;"; then
-    echo "Failed to connect to MySQL with root password"
-    exit 1
-fi
-
-# Secure MySQL installation
-echo "Securing MySQL installation..."
-sudo mysql -u root -p"$DB_PASS" <<EOF
 DELETE FROM mysql.user WHERE User='';
 DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');
 DROP DATABASE IF EXISTS test;
 DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
-FLUSH PRIVILEGES;
-EOF
-
-# Create application database and user
-echo "Creating database and user..."
-sudo mysql -u root -p"$DB_PASS" <<EOF
 CREATE DATABASE IF NOT EXISTS $DB_NAME;
 CREATE USER IF NOT EXISTS '$DB_USER'@'localhost' IDENTIFIED WITH mysql_native_password BY '$DB_PASS';
 GRANT ALL PRIVILEGES ON $DB_NAME.* TO '$DB_USER'@'localhost';

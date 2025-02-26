@@ -128,15 +128,6 @@ build {
     "source.googlecompute.ubuntu"
   ]
   
-  // Add this provisioner before file transfers
-  provisioner "shell" {
-    inline = [
-      "sudo apt-get update",
-      "sudo apt-get install -y unzip",
-      "sudo DEBIAN_FRONTEND=noninteractive apt-get upgrade -y"
-    ]
-  }
-  
   provisioner "file" {
     source      = "${path.root}/../webapp.zip"
     destination = "/tmp/webapp.zip"
@@ -155,10 +146,6 @@ build {
       "PORT=8080"
     ]
     inline = [
-      "echo 'Debugging environment variables:'",
-      "echo DB_PASS=${var.db_pass}",
-      "echo DB_NAME=${var.db_name}",
-      "echo DB_USER=${var.db_user}",
       "chmod +x /tmp/setup.sh",
       "sudo -E /tmp/setup.sh"
     ]
