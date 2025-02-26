@@ -120,6 +120,9 @@ source "googlecompute" "ubuntu" {
     enable-oslogin = "FALSE"
   }
   state_timeout = "10m"
+  
+  // Add tags for firewall rules
+  tags = ["http-server", "https-server"]
 }
 
 build {

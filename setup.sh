@@ -213,4 +213,14 @@ EOF"
 sudo chown "$APP_USER:$APP_GROUP" "$APP_DIR/.env"
 sudo chmod 600 "$APP_DIR/.env"
 
+# Install npm dependencies as the application user
+echo "Installing npm dependencies..."
+cd "$APP_DIR"
+sudo -u "$APP_USER" npm install
+
+# Add after Node.js installation
+echo "Setting up npm permissions..."
+sudo mkdir -p /home/$APP_USER/.npm
+sudo chown -R $APP_USER:$APP_GROUP /home/$APP_USER/.npm
+sudo chown -R $APP_USER:$APP_GROUP $APP_DIR
 echo "Setup completed successfully!"
