@@ -197,6 +197,7 @@ jobs:
           PKR_VAR_vpc_id: ${{ secrets.VPC_ID }}
           PKR_VAR_subnet_id: ${{ secrets.SUBNET_ID }}
           PKR_VAR_aws_region: ${{ secrets.AWS_REGION }}
+          PKR_VAR_demo_user: ${{ secrets.DEMO_USER }}
           PKR_VAR_gcp_project_id: ${{ secrets.GCP_PROJECT_ID }}
           GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
         run: packer validate aws-ubuntu.pkr.hcl
@@ -213,9 +214,9 @@ jobs:
           PKR_VAR_vpc_id: ${{ secrets.VPC_ID }}
           PKR_VAR_subnet_id: ${{ secrets.SUBNET_ID }}
           PKR_VAR_aws_region: ${{ secrets.AWS_REGION }}
+          PKR_VAR_demo_user: ${{ secrets.DEMO_USER }}
           PKR_VAR_gcp_project_id: ${{ secrets.GCP_PROJECT_ID }}
           GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
-          GOOGLE_CLOUD_PROJECT: ${{ secrets.GCP_PROJECT_ID }}
         run: packer build aws-ubuntu.pkr.hcl
 
       - name: Retrieve Latest AMI and Save AMI_ID
@@ -231,13 +232,6 @@ jobs:
           
           if [[ -n "$AMI_ID" && "$AMI_ID" != "None" ]]; then
             echo "Found latest AMI: $AMI_ID"
-            
-            # Share with both dev and demo accounts
-            aws ec2 modify-image-attribute \
-              --image-id "$AMI_ID" \
-              --launch-permission "{\"Add\": [{\"UserId\": \"${{ secrets.DEV_USER }}\"}, {\"UserId\": \"${{ secrets.DEMO_USER }}\"}]}" \
-              --region "${AWS_REGION}"
-            
             echo "ami_id=$AMI_ID" >> $GITHUB_OUTPUT
             echo "$AMI_ID" > ami_id.txt
           else
