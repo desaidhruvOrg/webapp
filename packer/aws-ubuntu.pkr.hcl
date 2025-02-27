@@ -120,7 +120,6 @@ source "googlecompute" "ubuntu" {
   }
   state_timeout = "10m"
   
-  // Add tags for firewall rules
   tags = ["http-server", "https-server", "webapp"]
 
   // Add network configuration
