@@ -168,6 +168,11 @@ jobs:
           service_account_key: ${{ secrets.GCP_SA_KEY }}
           export_default_credentials: true
 
+      # IMPORTANT: Make sure billing is enabled for your GCP project!
+      - name: Enable Compute Engine API
+        run: |
+            gcloud services enable compute.googleapis.com --quiet --project=${{ secrets.GCP_PROJECT_ID }}
+
       - name: Authenticate with Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -175,21 +180,6 @@ jobs:
           create_credentials_file: true
           export_environment_variables: true
           cleanup_credentials: true
-
-      # Add GCP Firewall Rules configuration
-      - name: Configure GCP Firewall Rules
-        run: |
-          if ! gcloud compute firewall-rules describe allow-webapp 2>/dev/null; then
-            gcloud compute firewall-rules create allow-webapp \
-              --direction=INGRESS \
-              --priority=1000 \
-              --network=default \
-              --action=ALLOW \
-              --rules=tcp:8080 \
-              --source-ranges=0.0.0.0/0 \
-              --target-tags=webapp \
-              --project=${{ secrets.GCP_PROJECT_ID }}
-          fi
 
       - name: Setup Packer
         uses: hashicorp/setup-packer@main
