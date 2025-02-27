@@ -242,16 +242,7 @@ jobs:
           PKR_VAR_demo_user: ${{ secrets.DEMO_USER }}
           PKR_VAR_gcp_project_id: ${{ secrets.GCP_PROJECT_ID }}
           GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
-          PACKER_LOG: 1
-        run: |
-          # Increase the timeout for GCP operations
-          export PACKER_PLUGIN_MAX_PORT=25000
-          export PACKER_PLUGIN_MIN_PORT=20000
-          packer build -on-error=ask aws-ubuntu.pkr.hcl || {
-            echo "Build failed. Checking instance status..."
-            gcloud compute instances list --filter="name~'packer-*'"
-            exit 1
-          }
+        run: packer build aws-ubuntu.pkr.hcl
 
       - name: Retrieve Latest AMI and Save AMI_ID
         id: share_ami
