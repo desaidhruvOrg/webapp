@@ -142,6 +142,25 @@ build {
     destination = "/tmp/setup.sh"
   }
 
+  // Add this before your main provisioners
+    provisioner "shell" {
+      inline = [
+        "sudo systemctl stop unattended-upgrades",
+        "sudo systemctl disable unattended-upgrades",
+        "while sudo lsof /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 1; done",
+        "sudo rm -f /var/lib/apt/lists/lock",
+        "sudo rm -f /var/cache/apt/archives/lock",
+        "sudo rm -f /var/lib/dpkg/lock*",
+        "sudo dpkg --configure -a",
+        "sudo apt-get clean",
+        "sudo apt-get update -y",
+        "sudo apt-get install -y command-not-found",
+        "sudo update-command-not-found",
+        "sudo apt-get install -y software-properties-common"
+      ]
+      timeout = "20m"
+    }
+  
   provisioner "shell" {
     environment_vars = [
       "DB_PASS=${var.db_pass}",
