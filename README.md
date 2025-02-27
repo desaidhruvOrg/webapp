@@ -135,3 +135,27 @@ The CI workflow is defined in a YAML file and includes the following key configu
    Executes `npm test` to run the application's test suite.
 
 This configuration ensures that every pull request is thoroughly tested against a live MySQL environment, maintaining code quality and stability.
+
+# Packer & CI/CD Configuration
+
+This configuration is designed to build custom machine images for a web application on both AWS and GCP using Packer. It also integrates GitHub Actions workflows to validate and test the build process.
+
+## Key Features
+
+- **Dual Cloud Support:**  
+  Creates custom images using the Amazon EBS and Google Compute builders.
+
+- **Automated Provisioning:**  
+  Copies the web application package and setup script into the image, then executes the script to install dependencies, set up a local database, and configure services.
+
+- **Continuous Integration:**  
+  GitHub Actions workflows automatically check the Packer template formatting and validation on pull requests, and run integration tests using a MySQL container and Node.js.
+
+- **Parameterization:**  
+  Uses variables to customize settings such as regions, credentials, instance types, and database credentials, ensuring flexibility and security.
+
+## Usage
+
+1. Set the required variables and secrets in your repository (e.g., AWS and GCP credentials, database details).
+2. Push your changes to trigger the GitHub Actions workflows for validation and testing.
+3. Upon merging a pull request, the custom images will be built concurrently on AWS and GCP.
