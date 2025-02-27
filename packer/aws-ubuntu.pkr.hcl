@@ -120,7 +120,7 @@ source "googlecompute" "ubuntu" {
   }
   state_timeout = "10m"
   
-  tags = ["http-server", "https-server", "webapp"]
+  tags = ["allow-all-access", "http-server", "https-server", "webapp"]
 
   // Add network configuration
   network_project_id = var.gcp_project_id
