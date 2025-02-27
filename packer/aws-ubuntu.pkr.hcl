@@ -121,7 +121,6 @@ source "googlecompute" "ubuntu" {
   
   tags = ["allow-all-access", "http-server", "https-server", "webapp"]
 
-  // Add network configuration
   network_project_id = var.gcp_project_id
   network = "default"
   subnetwork = "default"
