@@ -168,11 +168,6 @@ jobs:
           service_account_key: ${{ secrets.GCP_SA_KEY }}
           export_default_credentials: true
 
-      # IMPORTANT: Make sure billing is enabled for your GCP project!
-      - name: Enable Compute Engine API
-        run: |
-            gcloud services enable compute.googleapis.com --quiet --project=${{ secrets.GCP_PROJECT_ID }}
-
       - name: Authenticate with Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -180,6 +175,12 @@ jobs:
           create_credentials_file: true
           export_environment_variables: true
           cleanup_credentials: true
+
+      
+      # IMPORTANT: Make sure billing is enabled for your GCP project!
+      - name: Enable Compute Engine API
+        run: |
+            gcloud services enable compute.googleapis.com --quiet --project=${{ secrets.GCP_PROJECT_ID }}
 
       - name: Setup Packer
         uses: hashicorp/setup-packer@main
