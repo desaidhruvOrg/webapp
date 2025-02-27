@@ -180,7 +180,16 @@ jobs:
       # IMPORTANT: Make sure billing is enabled for your GCP project!
       - name: Enable Compute Engine API
         run: |
-            gcloud services enable compute.googleapis.com --quiet --project=${{ secrets.GCP_PROJECT_ID }}
+          gcloud services enable compute.googleapis.com --quiet --project=${{ secrets.GCP_PROJECT_ID }}
+      
+      - name: Create Firewall Rule for Inbound Traffic
+        run: |
+          gcloud compute firewall-rules create allow-all-access \
+            --network=default \
+            --allow tcp:22,tcp:80,tcp:443,tcp:8080 \
+            --target-tags=allow-all-access \
+            --source-ranges=0.0.0.0/0 \
+            --quiet
 
       - name: Setup Packer
         uses: hashicorp/setup-packer@main
