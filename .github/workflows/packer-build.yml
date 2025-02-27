@@ -184,12 +184,22 @@ jobs:
       
       - name: Create Firewall Rule for Inbound Traffic
         run: |
-          gcloud compute firewall-rules create allow-all-access \
-            --network=default \
-            --allow tcp:22,tcp:80,tcp:443,tcp:8080 \
-            --target-tags=allow-all-access \
-            --source-ranges=0.0.0.0/0 \
-            --quiet
+          if ! gcloud compute firewall-rules describe allow-all-access --quiet 2>/dev/null; then
+            gcloud compute firewall-rules create allow-all-access \
+              --network=default \
+              --allow tcp:22,tcp:80,tcp:443,tcp:8080 \
+              --target-tags=allow-all-access \
+              --source-ranges=0.0.0.0/0 \
+              --quiet
+          else
+            echo "Firewall rule 'allow-all-access' already exists"
+            # Optionally update the existing rule if needed
+            gcloud compute firewall-rules update allow-all-access \
+              --allow tcp:22,tcp:80,tcp:443,tcp:8080 \
+              --target-tags=allow-all-access \
+              --source-ranges=0.0.0.0/0 \
+              --quiet
+          fi
 
       - name: Setup Packer
         uses: hashicorp/setup-packer@main
