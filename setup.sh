@@ -168,7 +168,7 @@ Type=simple
 User=$APP_USER
 Group=$APP_GROUP
 WorkingDirectory=$APP_DIR
-ExecStart=/usr/bin/npm start
+ExecStart=/usr/bin/node $APP_DIR/app.js
 Restart=always
 Environment=NODE_ENV=production
 

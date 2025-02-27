@@ -90,7 +90,7 @@ source "amazon-ebs" "ubuntu" {
     max_attempts  = 50
   }
 
-  ami_users = [var.demo_user]  // Add this line to share AMI
+  ami_users = [var.demo_user]
 
   tags = {
     Name    = "webapp-ami"
@@ -122,7 +122,12 @@ source "googlecompute" "ubuntu" {
   state_timeout = "10m"
   
   // Add tags for firewall rules
-  tags = ["http-server", "https-server"]
+  tags = ["http-server", "https-server", "webapp"]
+
+  // Add network configuration
+  network_project_id = var.gcp_project_id
+  network = "default"
+  subnetwork = "default"
 }
 
 build {
