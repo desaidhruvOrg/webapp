@@ -105,7 +105,7 @@ source "amazon-ebs" "ubuntu" {
 }
 
 source "googlecompute" "ubuntu" {
-  project_id          = var.gcp_project_id
+      project_id          = var.gcp_project_id
   source_image_family = "ubuntu-2204-lts"
   zone                = var.gcp_zone
   ssh_username        = "ubuntu"
