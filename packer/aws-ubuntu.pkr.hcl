@@ -11,10 +11,10 @@ packer {
   }
 }
 
-# variable "aws_region" {
-#   type    = string
-#   default = null
-# }
+variable "aws_region" {
+  type    = string
+  default = null
+}
 
 variable "source_ami" {
   type    = string
