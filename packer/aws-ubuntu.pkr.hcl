@@ -18,7 +18,7 @@ packer {
 
 variable "source_ami" {
   type    = string
-  default = "ami-0c7217cdde317cfec"  # Ubuntu 24.04 LTS AMI ID
+  default = "ami-0c7217cdde317cfec" # Ubuntu 24.04 LTS AMI ID
 }
 
 variable "ssh_username" {
@@ -32,17 +32,17 @@ variable "subnet_id" {
 }
 
 variable "db_pass" {
-  type    = string
+  type      = string
   sensitive = true
 }
 
 variable "db_name" {
-  type    = string
+  type      = string
   sensitive = true
 }
 
 variable "db_user" {
-  type    = string
+  type      = string
   sensitive = true
 }
 
@@ -75,15 +75,15 @@ variable "demo_user" {
 source "amazon-ebs" "ubuntu" {
   ami_name      = "webapp-ami-${formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())}"
   instance_type = "t2.micro"
-  
-  region        = var.aws_region
-  vpc_id        = var.vpc_id
-  
-  source_ami    = var.source_ami
-  ssh_username  = var.ssh_username
-  
-  subnet_id     = var.subnet_id
-  
+
+  region = var.aws_region
+  vpc_id = var.vpc_id
+
+  source_ami   = var.source_ami
+  ssh_username = var.ssh_username
+
+  subnet_id = var.subnet_id
+
   aws_polling {
     delay_seconds = 30
     max_attempts  = 50
@@ -98,8 +98,8 @@ source "amazon-ebs" "ubuntu" {
 
   launch_block_device_mappings {
     device_name           = "/dev/sda1"
-    volume_size          = 25
-    volume_type          = "gp2"
+    volume_size           = 25
+    volume_type           = "gp2"
     delete_on_termination = true
   }
 }
@@ -112,17 +112,17 @@ source "googlecompute" "ubuntu" {
   image_name          = "webapp-image-${formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())}"
   instance_name       = "packer-${formatdate("YYYYMMDD-hhmmss", timestamp())}"
   machine_type        = "e2-micro"
-  
+
   metadata = {
     enable-oslogin = "FALSE"
   }
   state_timeout = "10m"
-  
+
   tags = ["allow-all-access", "http-server", "https-server", "webapp"]
 
   network_project_id = var.gcp_project_id
-  network = "default"
-  subnetwork = "default"
+  network            = "default"
+  subnetwork         = "default"
 }
 
 build {
@@ -130,7 +130,7 @@ build {
     "source.amazon-ebs.ubuntu",
     "source.googlecompute.ubuntu"
   ]
-  
+
   provisioner "file" {
     source      = "${path.root}/../webapp.zip"
     destination = "/tmp/webapp.zip"
