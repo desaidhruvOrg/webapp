@@ -43,7 +43,7 @@ sudo groupadd --system $APP_GROUP || true
 sudo useradd \
     --system \
     --gid $APP_GROUP \
-    --no-create-home \
+    --create-home \
     --shell /usr/sbin/nologin \
     $APP_USER || true
 
@@ -51,23 +51,29 @@ sudo useradd \
 echo "Configuring application directory..."
 sudo mkdir -p $APP_DIR
 sudo chown -R $APP_USER:$APP_GROUP $APP_DIR
-sudo find $APP_DIR -type d -exec chmod 750 {} \;
-sudo find $APP_DIR -type f -exec chmod 640 {} \;
+sudo chmod 755 $APP_DIR  # Relax permissions for npm operations
+
+# Set up npm configuration
+echo "Configuring npm environment..."
+sudo -u $APP_USER mkdir -p $APP_DIR/.npm/{cache,global}
+sudo -u $APP_USER npm config set cache "$APP_DIR/.npm/cache"
+sudo -u $APP_USER npm config set prefix "$APP_DIR/.npm/global"
 
 # Deploy Application
 echo "Deploying application..."
 sudo apt-get install -y -qq unzip
 sudo -u $APP_USER unzip -q /tmp/webapp.zip -d $APP_DIR/
 
-# Node Modules Setup
-echo "Configuring npm environment..."
-sudo -u $APP_USER mkdir -p $APP_DIR/node_modules
-sudo chmod 750 $APP_DIR/node_modules
+# Fix directory ownership after unzip
+sudo chown -R $APP_USER:$APP_GROUP $APP_DIR
 
 # Dependency Installation
 echo "Installing dependencies..."
 cd $APP_DIR
-sudo -u $APP_USER npm install --production --omit=dev --no-audit --no-fund
+sudo -u $APP_USER npm install --production --omit=dev --no-audit --no-fund --unsafe-perm
+
+# Clean npm cache
+sudo -u $APP_USER npm cache clean --force
 
 # Systemd Service Configuration
 echo "Configuring system service..."
@@ -86,6 +92,10 @@ Restart=always
 Environment=NODE_ENV=production
 ProtectSystem=full
 NoNewPrivileges=true
+
+# NPM environment variables
+Environment=NPM_CONFIG_CACHE=$APP_DIR/.npm/cache
+Environment=NPM_CONFIG_PREFIX=$APP_DIR/.npm/global
 
 [Install]
 WantedBy=multi-user.target
