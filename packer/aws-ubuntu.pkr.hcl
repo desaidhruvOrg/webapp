@@ -4,10 +4,10 @@ packer {
       source  = "github.com/hashicorp/amazon"
       version = "~> 1.2.6"
     }
-    googlecompute = {
-      source  = "github.com/hashicorp/googlecompute"
-      version = "~> 1.1.0"
-    }
+    # googlecompute = {
+    #   source  = "github.com/hashicorp/googlecompute"
+    #   version = "~> 1.1.0"
+    # }
   }
 }
 
@@ -31,35 +31,35 @@ variable "subnet_id" {
   default = null
 }
 
-variable "db_pass" {
-  type      = string
-  sensitive = true
-}
+# variable "db_pass" {
+#   type      = string
+#   sensitive = true
+# }
 
-variable "db_name" {
-  type      = string
-  sensitive = true
-}
+# variable "db_name" {
+#   type      = string
+#   sensitive = true
+# }
 
-variable "db_user" {
-  type      = string
-  sensitive = true
-}
+# variable "db_user" {
+#   type      = string
+#   sensitive = true
+# }
 
-variable "gcp_project_id" {
-  type    = string
-  default = null
-}
+# variable "gcp_project_id" {
+#   type    = string
+#   default = null
+# }
 
-variable "gcp_zone" {
-  type    = string
-  default = "us-central1-a"
-}
+# variable "gcp_zone" {
+#   type    = string
+#   default = "us-central1-a"
+# }
 
-variable "gcp_credentials_file" {
-  type    = string
-  default = null
-}
+# variable "gcp_credentials_file" {
+#   type    = string
+#   default = null
+# }
 
 variable "vpc_id" {
   type    = string
@@ -104,31 +104,31 @@ source "amazon-ebs" "ubuntu" {
   }
 }
 
-source "googlecompute" "ubuntu" {
-  project_id          = var.gcp_project_id
-  source_image_family = "ubuntu-2204-lts"
-  zone                = var.gcp_zone
-  ssh_username        = "ubuntu"
-  image_name          = "webapp-image-${formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())}"
-  instance_name       = "packer-${formatdate("YYYYMMDD-hhmmss", timestamp())}"
-  machine_type        = "e2-micro"
+# source "googlecompute" "ubuntu" {
+#   project_id          = var.gcp_project_id
+#   source_image_family = "ubuntu-2204-lts"
+#   zone                = var.gcp_zone
+#   ssh_username        = "ubuntu"
+#   image_name          = "webapp-image-${formatdate("YYYY-MM-DD-hh-mm-ss", timestamp())}"
+#   instance_name       = "packer-${formatdate("YYYYMMDD-hhmmss", timestamp())}"
+#   machine_type        = "e2-micro"
 
-  metadata = {
-    enable-oslogin = "FALSE"
-  }
-  state_timeout = "10m"
+#   metadata = {
+#     enable-oslogin = "FALSE"
+#   }
+#   state_timeout = "10m"
 
-  tags = ["allow-all-access", "http-server", "https-server", "webapp"]
+#   tags = ["allow-all-access", "http-server", "https-server", "webapp"]
 
-  network_project_id = var.gcp_project_id
-  network            = "default"
-  subnetwork         = "default"
-}
+#   network_project_id = var.gcp_project_id
+#   network            = "default"
+#   subnetwork         = "default"
+# }
 
 build {
   sources = [
     "source.amazon-ebs.ubuntu",
-    "source.googlecompute.ubuntu"
+    # "source.googlecompute.ubuntu"
   ]
 
   provisioner "file" {
@@ -142,12 +142,7 @@ build {
   }
 
   provisioner "shell" {
-    environment_vars = [
-      "DB_PASS=${var.db_pass}",
-      "DB_NAME=${var.db_name}",
-      "DB_USER=${var.db_user}",
-      "PORT=8080"
-    ]
+    environment_vars = ["PORT=8080"]
     inline = [
       "chmod +x /tmp/setup.sh",
       "sudo -E /tmp/setup.sh"
