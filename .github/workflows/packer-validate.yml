@@ -51,8 +51,8 @@ jobs:
           if [ -z "${{ secrets.DB_USER }}" ]; then
             missing_secrets+=("DB_USER")
           fi
-          if [ -z "${{ secrets.DB_PASSWORD }}" ]; then
-            missing_secrets+=("DB_PASSWORD")
+          if [ -z "${{ secrets.DB_PASS }}" ]; then
+            missing_secrets+=("DB_PASS")
           fi
           if [ -z "${{ secrets.VPC_ID }}" ]; then
             missing_secrets+=("VPC_ID")
@@ -94,7 +94,7 @@ jobs:
           cd packer
           
           packer validate \
-            -var "db_password=${{ secrets.DB_PASSWORD }}" \
+            -var "db_pass=${{ secrets.DB_PASS }}" \
             -var "db_name=${{ secrets.DB_NAME }}" \
             -var "db_user=${{ secrets.DB_USER }}" \
             -var "vpc_id=${{ secrets.VPC_ID }}" \
