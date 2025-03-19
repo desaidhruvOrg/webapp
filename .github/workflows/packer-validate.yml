@@ -11,23 +11,76 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Packer
         uses: hashicorp/setup-packer@main
         with:
           version: "1.9.4"
-          
+
       - name: Packer fmt
         working-directory: ./packer
         id: fmt
         run: |
           OUTPUT=$(packer fmt -check .)
           echo "fmt_output=$OUTPUT" >> $GITHUB_OUTPUT
-          if [[ $OUTPUT == *"has formatting issues"* ]]; then
+          if [[ $OUTPUT == "has formatting issues" ]]; then
             exit 1
           fi
-        continue-on-error: true
+        continue-on-error: false
+
+      - name: Check Packer fmt output
+        if: ${{ steps.fmt.outcome == 'failure' }}
+        run: |
+          echo "Packer fmt failed. Please run 'packer fmt' and commit the changes."
+          echo "Output: ${{ steps.fmt.outputs.fmt_output }}"
+          exit 1
+
+      - name: Verify Required Secrets
+        run: |
+          missing_secrets=()
           
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            missing_secrets+=("AWS_ACCESS_KEY_ID")
+          fi
+          if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+            missing_secrets+=("AWS_SECRET_ACCESS_KEY")
+          fi
+          if [ -z "${{ secrets.DB_NAME }}" ]; then
+            missing_secrets+=("DB_NAME")
+          fi
+          if [ -z "${{ secrets.DB_USER }}" ]; then
+            missing_secrets+=("DB_USER")
+          fi
+          if [ -z "${{ secrets.DB_PASS }}" ]; then
+            missing_secrets+=("DB_PASS")
+          fi
+          if [ -z "${{ secrets.VPC_ID }}" ]; then
+            missing_secrets+=("VPC_ID")
+          fi
+          if [ -z "${{ secrets.SUBNET_ID }}" ]; then
+            missing_secrets+=("SUBNET_ID")
+          fi
+          if [ -z "${{ secrets.AWS_REGION }}" ]; then
+            missing_secrets+=("AWS_REGION")
+          fi
+          if [ -z "${{ secrets.DEMO_USER }}" ]; then
+            missing_secrets+=("DEMO_USER")
+          fi
+          if [ -z "${{ secrets.GCP_PROJECT_ID }}" ]; then
+            missing_secrets+=("GCP_PROJECT_ID")
+          fi
+          
+          if [ ${#missing_secrets[@]} -ne 0 ]; then
+            echo "Error: The following secrets are not set:"
+            printf '%s\n' "${missing_secrets[@]}"
+            exit 1
+          fi
+
+      - name: Packer init
+        working-directory: ./packer
+        run: packer init .
+        continue-on-error: false
+
       - name: Packer validate
         working-directory: ./packer
         env:
@@ -35,41 +88,11 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           GOOGLE_CREDENTIALS: ${{ secrets.GCP_SA_KEY }}
         run: |
-          # Verify required secrets
-            - name: Verify Required Secrets
-              run: |
-                missing_secrets=()
-                
-                if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
-                  missing_secrets+=("AWS_ACCESS_KEY_ID")
-                fi
-                if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
-                  missing_secrets+=("AWS_SECRET_ACCESS_KEY")
-                fi
-                if [ -z "${{ secrets.DB_NAME }}" ]; then
-                  missing_secrets+=("DB_NAME")
-                fi
-                if [ -z "${{ secrets.DB_USER }}" ]; then
-                  missing_secrets+=("DB_USER")
-                fi
-                if [ -z "${{ secrets.DB_PASS }}" ]; then
-                  missing_secrets+=("DB_PASS")
-                fi
-                if [ -z "${{ secrets.VPC_ID }}" ]; then
-                  missing_secrets+=("VPC_ID")
-                fi
-                if [ -z "${{ secrets.SUBNET_ID }}" ]; then
-                  missing_secrets+=("SUBNET_ID")
-                fi
-                if [ -z "${{ secrets.AWS_REGION }}" ]; then
-                  missing_secrets+=("AWS_REGION")
-                fi
-                
-                if [ ${#missing_secrets[@]} -ne 0 ]; then
-                  echo "Error: The following secrets are not set:"
-                  printf '%s\n' "${missing_secrets[@]}"
-                  exit 1
-                fi
+          # Create a zip file for validation purposes
+          cd ..
+          zip -r webapp.zip .
+          cd packer
+          
           packer validate \
             -var "db_pass=${{ secrets.DB_PASS }}" \
             -var "db_name=${{ secrets.DB_NAME }}" \
@@ -77,5 +100,7 @@ jobs:
             -var "vpc_id=${{ secrets.VPC_ID }}" \
             -var "subnet_id=${{ secrets.SUBNET_ID }}" \
             -var "aws_region=${{ secrets.AWS_REGION }}" \
+            -var "demo_user=${{ secrets.DEMO_USER }}" \
+            -var "gcp_project_id=${{ secrets.GCP_PROJECT_ID }}" \
             .
-        continue-on-error: true
+        continue-on-error: false
