@@ -1,6 +1,7 @@
 const express = require('express');
 require('dotenv').config();
 const { initializeDatabase } = require('./models');
+const file_route = require('./routes/fileRoute');
 
 const app = express();
 
@@ -45,6 +46,8 @@ app.all('/healthz', (req, res) => {
   setHeaders(res);
   res.status(405).end();
 });
+
+app.use('/', file_route)
 
 app.all('*', (req, res) => {
   setHeaders(res);
