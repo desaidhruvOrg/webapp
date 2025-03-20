@@ -88,6 +88,7 @@ User=$APP_USER
 Group=$APP_GROUP
 WorkingDirectory=$APP_DIR
 ExecStart=/usr/bin/node $APP_DIR/app.js
+EnvironmentFile=-/opt/csye6225/.env
 Restart=always
 Environment=NODE_ENV=production
 ProtectSystem=full
