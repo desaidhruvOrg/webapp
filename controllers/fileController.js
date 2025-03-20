@@ -1,4 +1,4 @@
-const File = require('../models/file');
+const { db } = require('../models');
 const s3 = require('../utils/s3');
 const { v4: uuidv4 } = require('uuid');
 
@@ -28,7 +28,7 @@ exports.addFile = async (req, res) => {
 
     const data = await s3.upload(params).promise();
     
-    const newFile = await File.create({
+    const newFile = await db.File.create({
       id: fileId,
       file_name: file.originalname,
       url: `${process.env.AWS_S3_BUCKET_NAME}/${key}`,
@@ -50,7 +50,7 @@ exports.addFile = async (req, res) => {
 exports.getFile = async (req, res) => {
   try {
     const fileId = req.params.id;
-    const file = await File.findOne({ where: { id: fileId } });
+    const file = await db.File.findOne({ where: { id: fileId } });
 
     if (!file) {
       return res.status(404).json({ message: 'File not found' });
@@ -71,7 +71,7 @@ exports.getFile = async (req, res) => {
 exports.deleteFile = async (req, res) => {
   try {
     const fileId = req.params.id;
-    const file = await File.findOne({ where: { id: fileId } });
+    const file = await db.File.findOne({ where: { id: fileId } });
 
     if (!file) {
       return res.status(404).json({ message: 'File not found' });
@@ -89,7 +89,7 @@ exports.deleteFile = async (req, res) => {
     await s3.deleteObject(params).promise();
 
     // Delete from database
-    await File.destroy({ where: { id: fileId } });
+    await db.File.destroy({ where: { id: fileId } });
 
     res.status(204).send();
   } catch (error) {

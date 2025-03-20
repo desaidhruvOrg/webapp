@@ -20,6 +20,7 @@ app.use((req, res, next) => {
 });
 
 let HealthCheck = null;
+let File = null;
 
 function setHeaders(res) {
   res.header('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -61,6 +62,8 @@ async function startServer() {
   try {
     const models = await initializeDatabase();
     HealthCheck = models.HealthCheck;
+    // Make sure the db object is available globally if needed
+    global.db = models;
   } catch (error) {
     console.error('Database connection failed ', error.message);
   } finally {

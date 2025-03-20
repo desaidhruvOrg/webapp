@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const fileController = require('../controllers/fileController');
 const multer = require('multer');
-const methodNotAllowed = require('../middleware/methodnotallowed')
+const methodNotAllowed = require('../middleware/methodNotAllowed');
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });

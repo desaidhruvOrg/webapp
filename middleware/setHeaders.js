@@ -6,5 +6,4 @@ const setHeaders = (req,res,next) => {
     });
     next();
 };
-
 module.exports = setHeaders;
