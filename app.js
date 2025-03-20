@@ -1,8 +1,13 @@
 const express = require('express');
 require('dotenv').config();
 const { initializeDatabase } = require('./models');
+const file_route = require('./routes/fileRoute');
 
 const app = express();
+
+// Add middleware to parse JSON and form data
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.use((req, res, next) => {
   if (req.method === 'GET' && req.path === '/healthz') {
@@ -46,6 +51,8 @@ app.all('/healthz', (req, res) => {
   res.status(405).end();
 });
 
+app.use('/', file_route)
+
 app.all('*', (req, res) => {
   setHeaders(res);
   res.status(404).end();
@@ -58,6 +65,8 @@ async function startServer() {
   try {
     const models = await initializeDatabase();
     HealthCheck = models.HealthCheck;
+    // Make sure the db object is available globally if needed
+    global.db = models;
   } catch (error) {
     console.error('Database connection failed ', error.message);
   } finally {
