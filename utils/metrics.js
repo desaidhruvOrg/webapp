@@ -2,11 +2,11 @@ const StatsD = require('statsd-client');
 const logger = require('./logger');
 require('dotenv').config();
 
-// Initialize StatsD client
+// Initialize a single StatsD client
 const statsd = new StatsD({
   host: process.env.STATSD_HOST || 'localhost',
   port: process.env.STATSD_PORT || 8125,
-  prefix: 'CSYE6225/WebApp.',
+  prefix: 'WebApp.',
 });
 
 // Middleware to track API metrics
@@ -66,7 +66,7 @@ const trackS3Operation = async (operationFunc, operationType) => {
 };
 
 module.exports = {
-  statsd,  // Export the statsd client
+  statsd,
   trackApiMetrics,
   trackDbQuery,
   trackS3Operation

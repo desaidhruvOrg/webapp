@@ -2,7 +2,7 @@ const { db } = require('../models');
 const s3 = require('../utils/s3');
 const { v4: uuidv4 } = require('uuid');
 const logger = require('../utils/logger');
-const { statsd } = require('../utils/metrics');  // Import statsd from metrics
+const { statsd } = require('../utils/metrics');
 
 exports.addFile = async (req, res) => {
   const apiStartTime = new Date();
