@@ -120,7 +120,6 @@ sudo chmod 644 /var/log/webapp.log
 echo "Enabling application service..."
 sudo systemctl daemon-reload
 sudo systemctl enable webapp.service
-sudo systemctl enable amazon-cloudwatch-agent.service
 
 # Cleanup
 echo "Cleaning up temporary files..."
