@@ -72,9 +72,6 @@ echo "Deploying application..."
 sudo apt-get install -y -qq unzip
 sudo -u $APP_USER unzip -q /tmp/webapp.zip -d $APP_DIR/
 
-# Copy CloudWatch agent configuration from the correct location
-sudo cp /tmp/cloudwatch-agent-config.json /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
-
 # Fix directory ownership after unzip
 sudo chown -R $APP_USER:$APP_GROUP $APP_DIR
 
@@ -85,10 +82,6 @@ sudo -u $APP_USER npm install --production --omit=dev --no-audit --no-fund --uns
 
 # Clean npm cache
 sudo -u $APP_USER npm cache clean --force
-
-# Start CloudWatch Agent
-echo "Starting CloudWatch Agent..."
-sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
 
 # Systemd Service Configuration
 echo "Configuring system service..."
