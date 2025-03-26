@@ -60,7 +60,8 @@ if (process.env.AWS_REGION && process.env.NODE_ENV === 'production') {
   logger.add(
     new WinstonCloudWatch({
       logGroupName: process.env.CLOUDWATCH_LOG_GROUP_NAME || 'csye6225-webapp-logs',
-      logStreamName: `${process.env.CLOUDWATCH_LOG_STREAM_PREFIX || 'app'}-${new Date().toISOString()}`,
+      // Fix the log stream name format to use only allowed characters
+      logStreamName: `${process.env.CLOUDWATCH_LOG_STREAM_PREFIX || 'app'}-${Date.now()}`,
       awsRegion: process.env.AWS_REGION,
       messageFormatter: ({ level, message, ...meta }) => {
         return JSON.stringify({
