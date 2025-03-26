@@ -66,6 +66,7 @@ const trackS3Operation = async (operationFunc, operationType) => {
 };
 
 module.exports = {
+  statsd,  // Export the statsd client
   trackApiMetrics,
   trackDbQuery,
   trackS3Operation
