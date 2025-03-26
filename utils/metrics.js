@@ -6,23 +6,25 @@ require('dotenv').config();
 const statsd = new StatsD({
   host: process.env.STATSD_HOST || 'localhost',
   port: process.env.STATSD_PORT || 8125,
-  prefix: 'webapp.',
+  prefix: 'CSYE6225/WebApp.',
 });
 
 // Middleware to track API metrics
 const trackApiMetrics = (req, res, next) => {
   const startTime = Date.now();
-  const path = req.path.replace(/\/:[^/]+/g, '/:param'); // Normalize path params
+  const path = req.path.replace(/\/:[^/]+/g, '/:param');
   const method = req.method.toLowerCase();
-  const metricKey = `api.${method}.${path.replace(/\//g, '.')}`;
-
-  // Increment counter for API call
-  statsd.increment(`${metricKey}.count`);
+  
+  // Use the format expected by the dashboard
+  const apiName = `${req.method} ${path}`;
+  
+  // Increment counter for API call with the correct metric name
+  statsd.increment('api.calls.count', 1, { ApiName: apiName });
 
   // Track response time
   res.on('finish', () => {
     const duration = Date.now() - startTime;
-    statsd.timing(`${metricKey}.time`, duration);
+    statsd.timing('api.response.time', duration, { ApiName: apiName });
     logger.http(`${req.method} ${req.path} ${res.statusCode} - ${duration}ms`);
   });
 
@@ -35,37 +37,36 @@ const trackDbQuery = async (queryFunc, queryName) => {
   try {
     const result = await queryFunc();
     const duration = Date.now() - startTime;
-    statsd.timing(`db.${queryName}.time`, duration);
+    statsd.timing('db.query.time', duration, { QueryType: queryName });
     logger.debug(`DB Query ${queryName} completed in ${duration}ms`);
     return result;
   } catch (error) {
     const duration = Date.now() - startTime;
-    statsd.timing(`db.${queryName}.time`, duration);
-    logger.error(`DB Query ${queryName} failed after ${duration}ms: ${error.message}`);
+    statsd.timing('db.query.time', duration, { QueryType: queryName });
+    logger.error(`DB Query ${queryName} failed in ${duration}ms: ${error.message}`);
     throw error;
   }
 };
 
 // Function to track S3 operations
-const trackS3Operation = async (s3Func, operationName) => {
+const trackS3Operation = async (operationFunc, operationType) => {
   const startTime = Date.now();
   try {
-    const result = await s3Func();
+    const result = await operationFunc();
     const duration = Date.now() - startTime;
-    statsd.timing(`s3.${operationName}.time`, duration);
-    logger.debug(`S3 Operation ${operationName} completed in ${duration}ms`);
+    statsd.timing('s3.operation.time', duration, { Operation: operationType });
+    logger.debug(`S3 operation ${operationType} completed in ${duration}ms`);
     return result;
   } catch (error) {
     const duration = Date.now() - startTime;
-    statsd.timing(`s3.${operationName}.time`, duration);
-    logger.error(`S3 Operation ${operationName} failed after ${duration}ms: ${error.message}`);
+    statsd.timing('s3.operation.time', duration, { Operation: operationType });
+    logger.error(`S3 operation ${operationType} failed in ${duration}ms: ${error.message}`);
     throw error;
   }
 };
 
 module.exports = {
-  statsd,
   trackApiMetrics,
   trackDbQuery,
-  trackS3Operation,
+  trackS3Operation
 };

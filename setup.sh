@@ -117,6 +117,12 @@ Environment=NPM_CONFIG_PREFIX=$APP_DIR/.npm/global
 WantedBy=multi-user.target
 EOF
 
+# Create log directory and file with proper permissions
+echo "Setting up log files..."
+sudo touch /var/log/webapp.log
+sudo chown $APP_USER:$APP_GROUP /var/log/webapp.log
+sudo chmod 644 /var/log/webapp.log
+
 # Enable Service
 echo "Enabling application service..."
 sudo systemctl daemon-reload

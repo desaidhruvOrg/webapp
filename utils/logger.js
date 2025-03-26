@@ -43,6 +43,14 @@ const logger = winston.createLogger({
     new winston.transports.Console({
       format: consoleFormat,
     }),
+    // Add file transport to write to /var/log/webapp.log
+    new winston.transports.File({
+      filename: '/var/log/webapp.log',
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json()
+      )
+    })
   ],
   exitOnError: false,
 });
@@ -51,7 +59,7 @@ const logger = winston.createLogger({
 if (process.env.AWS_REGION && process.env.NODE_ENV === 'production') {
   logger.add(
     new WinstonCloudWatch({
-      logGroupName: process.env.CLOUDWATCH_LOG_GROUP_NAME || 'webapp-logs',
+      logGroupName: process.env.CLOUDWATCH_LOG_GROUP_NAME || 'csye6225-webapp-logs',
       logStreamName: `${process.env.CLOUDWATCH_LOG_STREAM_PREFIX || 'app'}-${new Date().toISOString()}`,
       awsRegion: process.env.AWS_REGION,
       messageFormatter: ({ level, message, ...meta }) => {
