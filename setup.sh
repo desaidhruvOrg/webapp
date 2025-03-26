@@ -37,6 +37,13 @@ echo "Installing Node.js..."
 curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | sudo -E bash - >/dev/null
 sudo apt-get install -y -qq nodejs
 
+# CloudWatch Agent Installation
+echo "Installing CloudWatch Agent..."
+sudo apt-get install -y -qq wget
+wget https://amazoncloudwatch-agent.s3.amazonaws.com/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb -O /tmp/amazon-cloudwatch-agent.deb
+sudo dpkg -i /tmp/amazon-cloudwatch-agent.deb
+sudo rm /tmp/amazon-cloudwatch-agent.deb
+
 # Application User Setup
 echo "Configuring application user..."
 sudo groupadd --system $APP_GROUP || true
@@ -50,6 +57,7 @@ sudo useradd \
 # Application Directory Setup
 echo "Configuring application directory..."
 sudo mkdir -p $APP_DIR
+sudo mkdir -p $APP_DIR/logs
 sudo chown -R $APP_USER:$APP_GROUP $APP_DIR
 sudo chmod 755 $APP_DIR  # Relax permissions for npm operations
 
@@ -64,6 +72,9 @@ echo "Deploying application..."
 sudo apt-get install -y -qq unzip
 sudo -u $APP_USER unzip -q /tmp/webapp.zip -d $APP_DIR/
 
+# Copy CloudWatch agent configuration from the correct location
+sudo cp /tmp/cloudwatch-agent-config.json /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+
 # Fix directory ownership after unzip
 sudo chown -R $APP_USER:$APP_GROUP $APP_DIR
 
@@ -74,6 +85,10 @@ sudo -u $APP_USER npm install --production --omit=dev --no-audit --no-fund --uns
 
 # Clean npm cache
 sudo -u $APP_USER npm cache clean --force
+
+# Start CloudWatch Agent
+echo "Starting CloudWatch Agent..."
+sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -s -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
 
 # Systemd Service Configuration
 echo "Configuring system service..."
@@ -106,6 +121,7 @@ EOF
 echo "Enabling application service..."
 sudo systemctl daemon-reload
 sudo systemctl enable webapp.service
+sudo systemctl enable amazon-cloudwatch-agent.service
 
 # Cleanup
 echo "Cleaning up temporary files..."

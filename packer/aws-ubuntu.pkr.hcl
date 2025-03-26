@@ -141,8 +141,17 @@ build {
     destination = "/tmp/setup.sh"
   }
 
+  provisioner "file" {
+    source      = "${path.root}/../cloudwatch-agent-config.json"
+    destination = "/tmp/cloudwatch-agent-config.json"
+  }
+
   provisioner "shell" {
-    environment_vars = ["PORT=8080"]
+    environment_vars = [
+      "PORT=8080",
+      "CLOUDWATCH_LOG_GROUP_NAME=webapp-logs",
+      "CLOUDWATCH_LOG_STREAM_PREFIX=app"
+    ]
     inline = [
       "chmod +x /tmp/setup.sh",
       "sudo -E /tmp/setup.sh"

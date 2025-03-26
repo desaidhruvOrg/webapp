@@ -1,11 +1,13 @@
 const { db } = require('../models');
 const s3 = require('../utils/s3');
 const { v4: uuidv4 } = require('uuid');
+const logger = require('../utils/logger');
 
 exports.addFile = async (req, res) => {
   try {
     const file = req.file;
     if (!file) {
+      logger.warn('File upload attempt with no file provided');
       return res.status(400).json({ message: 'No file provided' });
     }
 
@@ -14,6 +16,8 @@ exports.addFile = async (req, res) => {
     
     // Create a unique key for S3 using the file ID and original name
     const key = `${fileId}/${file.originalname}`;
+
+    logger.info(`Processing file upload: ${file.originalname} (${file.size} bytes)`);
 
     const params = {
       Bucket: process.env.AWS_S3_BUCKET_NAME,
@@ -35,6 +39,7 @@ exports.addFile = async (req, res) => {
       upload_date: new Date().toISOString().split('T')[0]
     });
 
+    logger.info(`File uploaded successfully: ${fileId}`);
     res.status(201).json({
       file_name: newFile.file_name,
       id: newFile.id,
@@ -42,7 +47,7 @@ exports.addFile = async (req, res) => {
       upload_date: newFile.upload_date
     });
   } catch (error) {
-    console.error(`Error adding file: ${error.message}`);
+    logger.error(`Error adding file: ${error.message}`, { stack: error.stack });
     res.status(400).json({ message: 'Bad Request' });
   }
 };
@@ -50,12 +55,16 @@ exports.addFile = async (req, res) => {
 exports.getFile = async (req, res) => {
   try {
     const fileId = req.params.id;
+    logger.info(`Fetching file with ID: ${fileId}`);
+    
     const file = await db.File.findOne({ where: { id: fileId } });
 
     if (!file) {
+      logger.warn(`File not found: ${fileId}`);
       return res.status(404).json({ message: 'File not found' });
     }
 
+    logger.info(`File retrieved successfully: ${fileId}`);
     res.status(200).json({
       file_name: file.file_name,
       id: file.id,
@@ -63,7 +72,7 @@ exports.getFile = async (req, res) => {
       upload_date: file.upload_date
     });
   } catch (error) {
-    console.error(`Error fetching file: ${error.message}`);
+    logger.error(`Error fetching file: ${error.message}`, { stack: error.stack });
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
@@ -71,9 +80,12 @@ exports.getFile = async (req, res) => {
 exports.deleteFile = async (req, res) => {
   try {
     const fileId = req.params.id;
+    logger.info(`Deleting file with ID: ${fileId}`);
+    
     const file = await db.File.findOne({ where: { id: fileId } });
 
     if (!file) {
+      logger.warn(`File not found for deletion: ${fileId}`);
       return res.status(404).json({ message: 'File not found' });
     }
 
@@ -91,13 +103,15 @@ exports.deleteFile = async (req, res) => {
     // Delete from database
     await db.File.destroy({ where: { id: fileId } });
 
+    logger.info(`File deleted successfully: ${fileId}`);
     res.status(204).send();
   } catch (error) {
-    console.error(`Error deleting file: ${error.message}`);
+    logger.error(`Error deleting file: ${error.message}`, { stack: error.stack });
     res.status(500).json({ message: 'Internal Server Error' });
   }
 };
 
 exports.badRequest = (req, res) => {
+  logger.warn(`Bad request received: ${req.method} ${req.path}`);
   res.status(400).json({ message: 'Bad Request' });
 };
