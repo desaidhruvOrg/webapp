@@ -37,6 +37,13 @@ echo "Installing Node.js..."
 curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | sudo -E bash - >/dev/null
 sudo apt-get install -y -qq nodejs
 
+# CloudWatch Agent Installation
+echo "Installing CloudWatch Agent..."
+sudo apt-get install -y -qq wget
+wget https://amazoncloudwatch-agent.s3.amazonaws.com/ubuntu/amd64/latest/amazon-cloudwatch-agent.deb -O /tmp/amazon-cloudwatch-agent.deb
+sudo dpkg -i /tmp/amazon-cloudwatch-agent.deb
+sudo rm /tmp/amazon-cloudwatch-agent.deb
+
 # Application User Setup
 echo "Configuring application user..."
 sudo groupadd --system $APP_GROUP || true
@@ -50,6 +57,7 @@ sudo useradd \
 # Application Directory Setup
 echo "Configuring application directory..."
 sudo mkdir -p $APP_DIR
+sudo mkdir -p $APP_DIR/logs
 sudo chown -R $APP_USER:$APP_GROUP $APP_DIR
 sudo chmod 755 $APP_DIR  # Relax permissions for npm operations
 
@@ -101,6 +109,12 @@ Environment=NPM_CONFIG_PREFIX=$APP_DIR/.npm/global
 [Install]
 WantedBy=multi-user.target
 EOF
+
+# Create log directory and file with proper permissions
+echo "Setting up log files..."
+sudo touch /var/log/webapp.log
+sudo chown $APP_USER:$APP_GROUP /var/log/webapp.log
+sudo chmod 644 /var/log/webapp.log
 
 # Enable Service
 echo "Enabling application service..."

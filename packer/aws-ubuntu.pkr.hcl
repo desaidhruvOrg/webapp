@@ -142,7 +142,9 @@ build {
   }
 
   provisioner "shell" {
-    environment_vars = ["PORT=8080"]
+    environment_vars = [
+      "PORT=8080"
+    ]
     inline = [
       "chmod +x /tmp/setup.sh",
       "sudo -E /tmp/setup.sh"
