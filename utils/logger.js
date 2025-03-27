@@ -4,7 +4,6 @@ const path = require("path");
 const fs = require("fs");
 require("dotenv").config();
 
-// Define log levels
 const logLevels = {
 	error: 0,
 	warn: 1,
@@ -13,7 +12,6 @@ const logLevels = {
 	debug: 4,
 };
 
-// Define log colors
 const logColors = {
 	error: "red",
 	warn: "yellow",
@@ -22,7 +20,6 @@ const logColors = {
 	debug: "white",
 };
 
-// Configure Winston format
 winston.addColors(logColors);
 
 const consoleFormat = winston.format.combine(
@@ -33,13 +30,11 @@ const consoleFormat = winston.format.combine(
 	)
 );
 
-// Create logs directory if it doesn't exist
 const logDir = process.env.LOG_DIR || path.join(process.cwd(), "logs");
 if (!fs.existsSync(logDir)) {
 	fs.mkdirSync(logDir, { recursive: true });
 }
 
-// Create the logger instance
 const logger = winston.createLogger({
 	levels: logLevels,
 	level: process.env.LOG_LEVEL || "info",
