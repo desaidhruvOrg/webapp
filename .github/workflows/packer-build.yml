@@ -373,10 +373,23 @@ jobs:
             - name: Start instance refresh
               id: start_refresh
               run: |
-                  ASG_NAME=$(aws autoscaling describe-auto-scaling-groups --query "AutoScalingGroups[?contains(Tags[?Key=='Name'].Value, 'Main-asg')].AutoScalingGroupName" --output text)
+                  # Get ASG Name
+                  ASG_NAME=$(aws autoscaling describe-auto-scaling-groups \
+                    --query "AutoScalingGroups[?AutoScalingGroupName=='Main-asg'].AutoScalingGroupName" \
+                    --output text)
 
+                  if [ -z "$ASG_NAME" ]; then
+                    echo "Error: Could not find Auto Scaling Group"
+                    echo "Available ASGs:"
+                    aws autoscaling describe-auto-scaling-groups --query 'AutoScalingGroups[].AutoScalingGroupName' --output table
+                    exit 1
+                  fi
+
+                  echo "Found ASG: $ASG_NAME"
+
+                  # Start the refresh
                   REFRESH_ID=$(aws autoscaling start-instance-refresh \
-                    --auto-scaling-group-name $ASG_NAME \
+                    --auto-scaling-group-name "$ASG_NAME" \
                     --preferences '{"MinHealthyPercentage": 90, "InstanceWarmup": 300}' \
                     --query "InstanceRefreshId" --output text)
 
