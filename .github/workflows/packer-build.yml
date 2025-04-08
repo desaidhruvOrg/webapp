@@ -400,21 +400,32 @@ jobs:
             # Wait for instance refresh to complete
             - name: Wait for instance refresh to complete
               run: |
-                  echo "Waiting for instance refresh to complete..."
+                  echo "Waiting for instance refresh to complete (estimated time: 15-30 minutes)..."
+                  start_time=$(date +%s)
 
                   while true; do
                     STATUS=$(aws autoscaling describe-instance-refreshes \
-                      --auto-scaling-group-name ${{ env.ASG_NAME }} \
-                      --instance-refresh-ids ${{ env.REFRESH_ID }} \
-                      --query "InstanceRefreshes[0].Status" --output text)
+                      --auto-scaling-group-name "${{ env.ASG_NAME }}" \
+                      --instance-refresh-ids "${{ env.REFRESH_ID }}" \
+                      --query "InstanceRefreshes[0].[Status,StatusReason]" \
+                      --output text)
                     
-                    echo "Current status: $STATUS"
+                    status_type=$(echo "$STATUS" | cut -f1)
+                    status_reason=$(echo "$STATUS" | cut -f2)
+                    current_time=$(date +%s)
+                    elapsed_time=$((current_time - start_time))
+                    elapsed_minutes=$((elapsed_time / 60))
                     
-                    if [ "$STATUS" == "Successful" ]; then
-                      echo "Instance refresh completed successfully!"
+                    echo "Current status: $status_type (Running for ${elapsed_minutes} minutes)"
+                    if [ ! -z "$status_reason" ]; then
+                      echo "Status reason: $status_reason"
+                    fi
+                    
+                    if [ "$status_type" == "Successful" ]; then
+                      echo "Instance refresh completed successfully after ${elapsed_minutes} minutes!"
                       exit 0
-                    elif [ "$STATUS" == "Failed" ] || [ "$STATUS" == "Cancelled" ]; then
-                      echo "Instance refresh failed or was cancelled."
+                    elif [ "$status_type" == "Failed" ] || [ "$status_type" == "Cancelled" ]; then
+                      echo "Instance refresh failed or was cancelled after ${elapsed_minutes} minutes."
                       exit 1
                     fi
                     
