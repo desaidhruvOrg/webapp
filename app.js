@@ -13,7 +13,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(trackApiMetrics);
 
 app.use((req, res, next) => {
-	if ((req.method === "GET" && req.path === "/healthz") || (req.method === "GET" && req.path === "/cicd")) {
+	if (req.method === "GET" && req.path === "/healthz") {
 		const hasContent =
 			Object.keys(req.query).length > 0 ||
 			req.headers["content-length"] > 0 ||
@@ -58,31 +58,6 @@ app.get("/healthz", async (req, res) => {
 
 app.all("/healthz", (req, res) => {
 	logger.warn(`Method not allowed on health check endpoint: ${req.method}`);
-	setHeaders(res);
-	res.status(405).end();
-});
-
-// Add new CICD endpoint
-app.get("/cicd", async (req, res) => {
-	try {
-		if (!HealthCheck) {
-			throw new Error("Database not connected");
-		}
-		await HealthCheck.create({});
-		setHeaders(res);
-		logger.info("CICD check success");
-		res.status(200).end();
-	} catch (error) {
-		logger.error(`CICD check failed: ${error.message}`, {
-			stack: error.stack,
-		});
-		setHeaders(res);
-		res.status(503).end();
-	}
-});
-
-app.all("/cicd", (req, res) => {
-	logger.warn(`Method not allowed on CICD check endpoint: ${req.method}`);
 	setHeaders(res);
 	res.status(405).end();
 });
