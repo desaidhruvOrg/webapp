@@ -1,161 +1,186 @@
-# webapp
-# Health Check API
+# Cloud Native Web Application
 
 ## Overview
-This project implements a RESTful web application with a health check endpoint and automated deployment capabilities. The application is built using Node.js and Express, with MySQL as the database.
 
-## Features
+This project implements a modern web application deployment across AWS. The application is built with Node.js and Express, featuring a health check endpoint and MySQL database integration. When developers push code, GitHub Actions automatically run tests and build custom AMIs using Packer. These AMIs contain everything needed to run the application, including system configurations and dependencies.
+
+## Key Features
 
 ### Health Check Endpoint
-- Endpoint: `/healthz`
-- Methods: GET
-- Responses:
-  - `200`: Application and database are healthy
-  - `400`: Invalid request (query parameters or content present)
-  - `405`: Method not allowed
-  - `503`: Database connection failure
-- Headers:
-  - `Cache-Control: no-cache, no-store, must-revalidate`
-  - `Pragma: no-cache`
-  - `X-Content-Type-Options: nosniff`
 
-### Integration Tests
-- Comprehensive test suite using Jest and Supertest
-- Tests cover:
-  - Successful health check
-  - Invalid request handling
-  - Method validation
-  - Non-existent routes
-  - Header validation
-  - Database connectivity
+-   Endpoint: `/healthz`
+-   Methods: GET
+-   Responses:
+    -   `200`: Application and database are healthy
+    -   `400`: Invalid request (query parameters or content present)
+    -   `405`: Method not allowed
+    -   `503`: Database connection failure
+-   Headers:
+    -   `Cache-Control: no-cache, no-store, must-revalidate`
+    -   `Pragma: no-cache`
+    -   `X-Content-Type-Options: nosniff`
 
-### Automated Deployment
-The `setup.sh` script automates:
-- System updates and package installation
-- Swap space configuration
-- MySQL installation and optimization
-- Database initialization and security
-- Application user and directory setup
-- Node.js environment configuration
-- Systemd service creation
+### CI/CD Pipeline
 
-## Technology Stack
-- Node.js
-- Express.js
-- MySQL
-- Jest (Testing)
-- Supertest (API Testing)
+-   Automated testing with GitHub Actions and MySQL integration
+-   Packer-based AMI building for AWS
+-   Cross-account AMI sharing between dev and demo environments
+-   Automated instance refresh for zero-downtime deployments
+
+### Security
+
+-   Dedicated application user (csye6225) with appropriate permissions
+-   No-cache headers and sniff prevention
+-   MySQL security hardening
+-   KMS encryption for sensitive data
+-   Encrypted EBS volumes using custom KMS keys
+
+### Monitoring
+
+-   CloudWatch integration with custom metrics
+-   Winston logging
+-   StatsD metrics collection
+-   Auto-scaling based on CPU utilization
+-   Health check endpoint for uptime monitoring
+
+## Infrastructure Components
+
+-   Load Balancer with SSL/TLS termination
+-   Auto Scaling Group (3-5 instances)
+-   RDS MySQL database with encryption
+-   Route53 DNS management
+-   KMS keys for resource encryption
 
 ## Prerequisites
-- Ubuntu 24.04 LTS
-- Minimum 512MB RAM
-- Root/sudo access
-- SSH access
+
+-   Ubuntu 24.04 LTS
+-   Node.js 20
+-   MySQL 8.0
+-   AWS CLI configured with appropriate credentials
+-   Minimum 512MB RAM
+-   Root/sudo access
+-   SSH access
 
 ## Installation
 
 1. Clone the repository:
+
 ```bash
 git clone <repository-url>
 cd webapp
 ```
 
-2. Create application zip:
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Create application zip:
+
 ```bash
 zip -r webapp.zip .
 ```
 
-3. Copy files to server:
+4. Copy files to server:
+
 ```bash
 scp -i ~/.ssh/your_key webapp.zip root@your-server:/tmp/
 scp -i ~/.ssh/your_key setup.sh root@your-server:/root/
 ```
 
-4. Run setup script:
+5. Run setup script:
+
 ```bash
 bash setup.sh
 ```
 
+## SSL Certificate Management
+
+### Import Certificate to ACM
+
+```bash
+# Convert certificate to PEM format if needed
+openssl x509 -in certificate.crt -out certificate.pem
+
+# Import certificate to ACM
+aws acm import-certificate \
+  --certificate fileb://certificate.pem \
+  --private-key fileb://private.key \
+  --certificate-chain fileb://chain.pem \
+  --region your-region
+```
+
 ## Testing
+
 Run the test suite:
+
 ```bash
 npm test
 ```
 
 ## Security Features
-- Dedicated application user and group
-- MySQL security hardening
-- Proper file permissions
-- No-cache headers
-- Sniff prevention headers
 
-## Monitoring
-- Health check endpoint for uptime monitoring
-- Systemd service logs
-- MySQL error logs
+-   Application Security:
 
-# Assignment - 03
+    -   Dedicated system user with limited permissions
+    -   No-cache headers implementation
+    -   Sniff prevention headers
+    -   Input validation and sanitization
+    -   Secure session handling
 
-# GitHub Actions for Webapp
+-   Infrastructure Security:
+    -   KMS encryption for:
+        -   EBS volumes
+        -   RDS database
+        -   S3 buckets
+    -   Security group restrictions
+    -   Private subnet placement
+    -   SSL/TLS termination at ALB
 
-This repository uses GitHub Actions to run continuous integration (CI) tests for a Node.js-based web application that connects to a MySQL database. The workflow is automatically triggered on every pull request targeting the `main` branch.
+## Monitoring and Scaling
 
-## Workflow Overview
+-   CloudWatch Integration:
 
-The CI workflow is defined in a YAML file and includes the following key configurations:
+    -   Custom metrics collection
+    -   Log aggregation
+    -   CPU utilization monitoring
+    -   Request count tracking
+    -   Error rate monitoring
 
-- **Trigger:**  
-  The workflow is triggered when a pull request is opened against the `main` branch.
+-   Auto Scaling:
+    -   Scale up threshold: > 5% CPU usage
+    -   Scale down threshold: < 3% CPU usage
+    -   Minimum instances: 3
+    -   Maximum instances: 5
+    -   Instance refresh policy:
+        -   Minimum healthy percentage: 90%
+        -   Instance warmup: 300 seconds
 
-- **Job Environment:**  
-  The job runs on an `ubuntu-latest` runner. It sets up a MySQL service using the official MySQL 8.0 Docker image and uses health checks to ensure the MySQL service is ready before running tests.
+## Deployment Process
 
-- **MySQL Service Health Checks:**  
-  The MySQL container is configured with these options:
-  - `--health-cmd="mysqladmin ping --silent"`
-  - `--health-interval=10s`
-  - `--health-timeout=5s`
-  - `--health-retries=3`
+1. Code changes trigger GitHub Actions workflow
+2. Automated tests run against MySQL container
+3. On success, Packer builds new AMI
+4. AMI is shared with demo account
+5. Auto Scaling Group performs instance refresh
+6. Zero-downtime deployment completes
 
-## Workflow Steps
+## Troubleshooting
 
-1. **Checkout Code:**  
-   Uses `actions/checkout@v3` to retrieve the repository code.
+-   Health Check Issues:
 
-2. **Setup Node.js:**  
-   Uses `actions/setup-node@v3` to install Node.js version 16.
+    -   Verify database connectivity
+    -   Check application logs
+    -   Validate security group rules
+    -   Confirm instance health status
 
-3. **Install Dependencies:**  
-   Executes `npm install` to install all required packages.
+-   Deployment Problems:
+    -   Review GitHub Actions logs
+    -   Check Packer build output
+    -   Verify AMI sharing permissions
+    -   Monitor instance refresh status
 
-4. **Wait for MySQL Service:**  
-   Runs a script that waits until the MySQL service is ready by checking if port `3306` is open.
+## Support
 
-5. **Run Tests:**  
-   Executes `npm test` to run the application's test suite.
-
-This configuration ensures that every pull request is thoroughly tested against a live MySQL environment, maintaining code quality and stability.
-
-# Packer & CI/CD Configuration
-
-This configuration is designed to build custom machine images for a web application on both AWS and GCP using Packer. It also integrates GitHub Actions workflows to validate and test the build process.
-
-## Key Features
-
-- **Dual Cloud Support:**  
-  Creates custom images using the Amazon EBS and Google Compute builders.
-
-- **Automated Provisioning:**  
-  Copies the web application package and setup script into the image, then executes the script to install dependencies, set up a local database, and configure services.
-
-- **Continuous Integration:**  
-  GitHub Actions workflows automatically check the Packer template formatting and validation on pull requests, and run integration tests using a MySQL container and Node.js.
-
-- **Parameterization:**  
-  Uses variables to customize settings such as regions, credentials, instance types, and database credentials, ensuring flexibility and security.
-
-## Usage
-
-1. Set the required variables and secrets in your repository (e.g., AWS and GCP credentials, database details).
-2. Push your changes to trigger the GitHub Actions workflows for validation and testing.
-3. Upon merging a pull request, the custom images will be built concurrently on AWS and GCP.
+For issues and feature requests, please create a GitHub issue in the repository.
